@@ -37,6 +37,8 @@ with open('../data/inputex.csv', encoding="latin-1") as csvfile:        # Clean 
 #print('Your range: ' + my_range)
 #my_range = float(my_range)
 
+#add 6 mins
+
 my_range = 0.005
 
 # Calculations
