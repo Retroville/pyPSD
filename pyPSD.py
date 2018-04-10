@@ -2,13 +2,14 @@
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
+import codecs
 
 vol_col = []
 ext_col = []
 dat = []
 
 # Data Import & Prompt
-with open('../data/inputex.csv', encoding="latin-1") as csvfile:
+with codecs.open('data/inputex.csv', 'rb', encoding="latin-1") as csvfile:
 
     csvreader = csv.reader(csvfile)
 
@@ -24,7 +25,7 @@ ext_col_strs = 'Select the data column: ' + ', '.join(dat[0])
 ext_col_idx = int(input(ext_col_strs)) - 1
 print('You chose: ', dat[0][ext_col_idx])
 
-with open('../data/inputex.csv', encoding="latin-1") as csvfile:        # Clean this later
+with open('data/inputex.csv', encoding="latin-1") as csvfile:        # Clean this later
 
     csvreader = csv.reader(csvfile)
 
@@ -33,11 +34,9 @@ with open('../data/inputex.csv', encoding="latin-1") as csvfile:        # Clean 
         ext_col.append(row[ext_col_idx])
 
 
-#my_range = input('Input the range of the x axis bins: ')
-#print('Your range: ' + my_range)
-#my_range = float(my_range)
-
-#add 6 mins
+my_range = input('Input the range of the x axis bins: ')
+print('Your range: ' + my_range)
+my_range = float(my_range)
 
 my_range = 0.005
 
@@ -55,10 +54,16 @@ bin_edges = np.arange(0, max(extent), my_range)
 
 counts = plt.hist(extent, bins=bin_edges)[0]
 
+numavg = sum(extent)/len(extent)
+
 idx = np.searchsorted(bin_edges, extent, 'right')
 for i in range(1, len(bin_edges)):
     logc = idx == i
     volbinsums.append(sum(volume[logc]))
+
+volbinfracsums = volbinsums/sum(volume)
+volfrac = volume/sum(volume)
+volavg = sum(extent*volfrac) / len(extent)
 
 # Plotting
 fig = plt.figure()
@@ -83,3 +88,6 @@ ax2.set_ylabel('Volume')
 plt.setp(ax2.get_xticklabels(), rotation=90)
 
 plt.show()
+
+print('Number Average: ', numavg)
+print('Volume Average: (Warning) ', volavg)
