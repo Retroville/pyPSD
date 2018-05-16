@@ -48,7 +48,7 @@ def voldist(dat, strs):
     volfrac = volume / sum(volume)  # basic volume fraction                    [0]
     volavg = sum(extent * volfrac) / len(extent)  # what even is this?         [3]
 
-    binlabels = np.arange(0, len(volbinsums))
+    binlabels = range(0, len(volbinsums))
 
     plt.figure(num=2, figsize=(8,8))
     plt.tight_layout()
@@ -76,6 +76,7 @@ def voldist(dat, strs):
     print('Volume Average: (Warning) ', volavg)
 
     return True
+
 '''
 def scattergrid(dat, str_col_idx, ext_col_idx):
     fig = plt.figure(num=1)
