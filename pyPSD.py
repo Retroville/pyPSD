@@ -114,8 +114,7 @@ def cmd_csv():
 def cmd_next():
     return
 def cmd_quit():
-    quit()
-    return
+    return quit()
 
 def menu_cmd():
     OPTIONS = {"bins":dict( desc = "Change bins of currently active distribution plot", func = None), # wew lad
@@ -152,8 +151,14 @@ def get_bins():
 
 def promptdatcol():
     ext_col_strs = 'Select the data column:\n' + '\n'.join(dat_prompt_strs)
-    ext_col_idx = int(input(ext_col_strs)) - 1
-    print(color('\n\nYou chose: ', 'green') + strs[ext_col_idx] + '\n')
+    #ext_col_idx = input(ext_col_strs)
+    ext_col_idx = input(ext_col_strs)
+    if ',' not in ext_col_idx:
+        ext_col_idx = int(ext_col_idx)-1
+        print(color('\n\nYou chose: ', 'green') + strs[ext_col_idx] + '\n')
+    else:
+        ext_col_idx = [int(i)-1 for i in ext_col_idx.split(',')]
+        print(color('\n\nYou chose: ', 'green') + 'Multiple input columns' + '\n')
     return ext_col_idx
     # Imports data based on prompt results    
 
