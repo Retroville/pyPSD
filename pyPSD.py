@@ -2,6 +2,7 @@
 import unicodecsv as csv
 import numpy as np
 import matplotlib.pyplot as plt
+from termcolor import colored as color
 # import tkinter as tk
 # from tkinter import filedialog
 
@@ -12,86 +13,150 @@ dat_prompt_strs = []
 my_range = []
 #---- initilization of variables. do I even need to do this? who knows
 
-# %% Functions
-def voldist(dat, strs):
-    #Init:
-    volbinsums = []
-
-    #----
-    my_range = input('Input the range of the x axis bins (Type \'exit:\' to quit):')
-    print('Your range: ' + my_range)
-
-    volstr = strs[vol_col_idx]
-    volume = dat[:, vol_col_idx]
-    extstr = strs[ext_col_idx]
-    extent = dat[:, ext_col_idx]  # formats primary data and volume columns
-
-    if my_range:
-        my_range=float(my_range)
-        bin_edges = np.arange(0, max(extent), my_range)
-    elif my_range == 'exit':
-        return False
-    else:
-        bin_edges = 'auto'
-
-    counts, realbins = np.histogram(extent, bins=bin_edges)  # create num dist from bin edges [1]
-
-    numavg = sum(extent) / len(extent)  # basic average of primary data        [0]
-
-    idx = np.searchsorted(realbins, extent, 'right')
-
-    for i in range(1, len(realbins)):  # creates binned sums of volumes per count [2]
-        logc = idx == i
-        volbinsums.append(sum(volume[logc]))
-
-  # volbinfracsums = volbinsums / sum(volume)  # basic volume fraction (per bin)   [0]
-    volfrac = volume / sum(volume)  # basic volume fraction                    [0]
-    volavg = sum(extent * volfrac) / len(extent)  # what even is this?         [3]
-
-    binlabels = np.arange(0, len(volbinsums))
-
-    plt.figure(num=2, figsize=(8,8))
-    plt.tight_layout()
-    plt.ion()
-    plt.clf()
-
-    plt.subplot(2, 1, 1)
-    plt.bar(binlabels, counts,
-            width=-1, color='green', linewidth=0.2, edgecolor='black',
-            align='edge', tick_label=realbins[1:])
-    plt.xlabel(extstr)
-    plt.ylabel('Counts')
-    plt.xticks(rotation=90)
-
-    plt.subplot(2, 1, 2)
-    plt.bar(binlabels, volbinsums,
-            width=-1, color='green', linewidth=0.2, edgecolor='black',
-            align='edge', tick_label=realbins[1:])
-    plt.xlabel(volstr)
-    plt.ylabel('Volume')
-    plt.xticks(rotation=90)
+# %% Calculations
+class voldist(object):
+    def __init__(self, dat, strs, bin_edges):
+        self.dat = dat
+        self.strs = strs
+        self.volbinsums = []
 
 
-    print('Number Average: ', numavg)
-    print('Volume Average: (Warning) ', volavg)
+        self.volstr = strs[vol_col_idx]
+        volume = dat[:, vol_col_idx]
+        self.extstr = strs[ext_col_idx]
+        extent = dat[:, ext_col_idx]  # formats primary data and volume columns
 
-    return True
-'''
-def scattergrid(dat, str_col_idx, ext_col_idx):
-    fig = plt.figure(num=1)
+        self.counts, self.realbins = np.histogram(extent, bins=bin_edges)  #   [1]
+
+        self.numavg = sum(extent) / len(extent)  #                             [0]
+
+        idx = np.searchsorted(self.realbins, extent, 'right')
+
+        for i in range(1, len(self.realbins)):  #                              [2]
+            logc = idx == i
+            self.volbinsums.append(sum(volume[logc]))
+
+      # volbinfracsums = volbinsums / sum(volume)  #                           [0]
+        volfrac = volume / sum(volume)  #                                      [0]
+        self.volavg = sum(extent * volfrac) / len(extent)  #                   [3]
+
+        self.binlabels = range(0, len(self.volbinsums))
+
+        return
+
+# %% Plotting and output
+    def vdplot(self):
+
+        plt.figure(num=2, figsize=(8, 8))
+        plt.ion()
+        plt.clf()
+
+        def subhistplots(num, xvals, yvals, xstr, ystr):
+            plt.subplot(2, 1, num)
+            plt.bar(self.binlabels, yvals,
+                    width=1, color='green', linewidth=0.2, edgecolor='black',
+                    align='edge') #tick_label=self.realbins[1:]
+            plt.xlabel(ystr)
+            plt.ylabel(xstr)
+            plt.xticks(rotation=90)
+            return
+        subhistplots(1, self.binlabels, self.counts, self.extstr, 'Counts')
+        subhistplots(2, self.binlabels, self.volbinsums, self.volstr, 'Volume')
+        plt.tight_layout()
+        return
+
+       # print('Number Average: ', numavg)
+       # print('Volume Average: (Warning) ', volavg)
+
+    def writeout(self):
+        binout = self.realbins[1:]
+        ostr = [self.extstr, 'Counts', 'Volume']
+        odat = np.column_stack([binout, self.counts, self.volbinsums])
+        out = np.vstack([ostr,odat])
+        with open('../data/output.csv', 'wb',) as csvout:
+            outputwriter = csv.writer(csvout, delimiter=',')
+            outputwriter.writerows(out)
+        print(color('\n\nshant pass', 'blue') + '\n')
+        return
+
+def scattergrid(ext_col_idx):
+    scatterplots = plt.figure(num=1, figsize=(8, 8))
     plt.suptitle(strs[ext_col_idx])
     for i in range(1, len(dat[0])+1):
         # creates a grid of scatterplots, per each column pair
         plt.subplot(2, 2, i)
-        plt.scatter(dat[:, i-1], dat[:, ext_col_idx], marker='.', c='black')
-        plt.xlim(0, max(dat[:, i-1]))
-        plt.ylim(0, max(dat[:, ext_col_idx]))
+        if not i-1 == ext_col_idx:
+            plt.scatter(dat[:, i-1], dat[:, ext_col_idx], marker='.', c='black', s=1)
+            plt.xlim(0, max(dat[:, i-1]))
+          # plt.ylim(0, max(dat[:, ext_col_idx]))
+        else:
+            plt.plot([0,0,1,1,0,1,1,0],[0,1,0,1,0,0,1,1],'r')
+            plt.xticks([])
+            plt.yticks([])
         plt.xlabel(strs[i-1])
         plt.ylabel(strs[ext_col_idx])
-        fig.set_figheight(8)
-        fig.set_figwidth(8)
-    return '''
+    scatterplots.set_figheight(8)
+    scatterplots.set_figwidth(8)
+    plt.tight_layout()
+    plt.show(block=False)
+    return
+
+# %% Menu
+def cmd_save():
+    plt.figure(1)
+    plt.savefig('scatter')
+    plt.figure(2)
+    plt.savefig('dist')
+    print(color("\n\nPlots saved as scatter.png and dist.png", 'green') + '\n')
+    return
+def cmd_csv():
+    return v.writeout()
+def cmd_next():
+    return
+def cmd_quit():
+    quit()
+    return
+
+def menu_cmd():
+    OPTIONS = {"bins":dict( desc = "Change bins of currently active distribution plot", func = None), # wew lad
+               "save":dict( desc = "Save currently active plots as images", func = cmd_save),
+               "csv":dict( desc = "Export currently active plots to csv file", func = cmd_csv),
+               "next":dict( desc = "Select new data column (retains volume column selection", func = cmd_next),
+               "quit":dict( desc = "Exits the program", func = cmd_quit)}
+
+    while True:
+        print("\nPlease choose an option:")
+        for key in OPTIONS.keys():
+            print("\t" + key + "\t" + OPTIONS[key]["desc"])
+        cmd = input('Selection: ')
+        if not cmd in OPTIONS.keys():
+            print(color("\n\nInvalid selection", 'red') + '\n')
+        elif cmd == 'bins':
+            return
+        else:
+            OPTIONS[cmd]["func"]()
+    return
+
 # %% Data Import & Prompt
+def get_bins():
+    my_range = input('Input the range of the x axis bins: \n'
+                     '(Leave blank to bin automatically)')
+    print(color('\n\nYou Chose: ', 'green') + my_range + '\n')
+    if my_range:
+        my_range = float(my_range)
+        bin_edges = np.arange(0, max(dat[:, ext_col_idx]), my_range)
+    else:
+        bin_edges = 'auto'
+    return bin_edges
+
+
+def promptdatcol():
+    ext_col_strs = 'Select the data column:\n' + '\n'.join(dat_prompt_strs)
+    ext_col_idx = int(input(ext_col_strs)) - 1
+    print(color('\n\nYou chose: ', 'green') + strs[ext_col_idx] + '\n')
+    return ext_col_idx
+    # Imports data based on prompt results    
+
 
 # root = tk.Tk()
 # root.withdraw()
@@ -117,30 +182,14 @@ for i in range(0, len(strs)):  # creates prompt string: choice component
 
 vol_col_strs = 'Select the \'volume\' column: \n' + '\n'.join(dat_prompt_strs)
 vol_col_idx = int(input(vol_col_strs)) - 1
-print('You chose: ', strs[vol_col_idx])
+print(color('\n\nYou chose: ', 'green') + strs[vol_col_idx] + '\n')
 
-ext_col_strs = 'Select the data column:\n' + '\n'.join(dat_prompt_strs)
-ext_col_idx = int(input(ext_col_strs)) - 1
-print('You chose: ', strs[ext_col_idx])
-# Imports data based on prompt results
-
-# %% Main
-fig = plt.figure(num=1, figsize=(8,8))
-plt.suptitle(strs[ext_col_idx])
-for i in range(1, len(dat[0])+1):
-    # creates a grid of scatterplots, per each column pair
-    plt.subplot(2, 2, i)
-    plt.scatter(dat[:, i-1], dat[:, ext_col_idx], marker='.', c='black', s=1)
-    plt.xlim(0, max(dat[:, i-1]))
-    plt.ylim(0, max(dat[:, ext_col_idx]))
-    plt.xlabel(strs[i-1])
-    plt.ylabel(strs[ext_col_idx])
-fig.set_figheight(8)
-fig.set_figwidth(8)
-
-stay = True
-while stay:
-    stay = voldist(dat, strs)
-    plt.show()
-
-
+# %% Main Loop
+ext_col_idx = promptdatcol()
+while True:
+    fig1 = scattergrid(ext_col_idx)
+    while True:
+        v = voldist(dat, strs, get_bins())
+        fig2 = v.vdplot()
+        plt.show()
+        menu_cmd()
