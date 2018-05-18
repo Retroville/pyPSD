@@ -23,17 +23,17 @@ class voldist(object):
 
         self.volstr = strs[vol_col_idx]
         volume = dat[:, vol_col_idx]
-        self.extstr = strs[ext_col_idx]
-        extent = dat[:, ext_col_idx]  # formats primary data and volume columns
+        self.extstr = strs[ext_col_[idx]]
+        extent = dat[:, ext_col_[idx]]  # formats primary data and volume columns
 
         self.counts, self.realbins = np.histogram(extent, bins=bin_edges)  #   [1]
 
         self.numavg = sum(extent) / len(extent)  #                             [0]
 
-        idx = np.searchsorted(self.realbins, extent, 'right')
+        fidx = np.searchsorted(self.realbins, extent, 'right')
 
         for i in range(1, len(self.realbins)):  #                              [2]
-            logc = idx == i
+            logc = fidx == i
             self.volbinsums.append(sum(volume[logc]))
 
       # volbinfracsums = volbinsums / sum(volume)  #                           [0]
@@ -79,14 +79,14 @@ class voldist(object):
         print(color('\n\nshant pass', 'blue') + '\n')
         return
 
-def scattergrid(ext_col_idx):
+def scattergrid(ext_col_):
     scatterplots = plt.figure(num=1, figsize=(8, 8))
-    plt.suptitle(strs[ext_col_idx])
+    plt.suptitle(strs[ext_col_[idx]])
     for i in range(1, len(dat[0])+1):
         # creates a grid of scatterplots, per each column pair
         plt.subplot(2, 2, i)
-        if not i-1 == ext_col_idx:
-            plt.scatter(dat[:, i-1], dat[:, ext_col_idx], marker='.', c='black', s=1)
+        if not i-1 == ext_col_[idx]:
+            plt.scatter(dat[:, i-1], dat[:, ext_col_[idx]], marker='.', c='black', s=1)
             plt.xlim(0, max(dat[:, i-1]))
           # plt.ylim(0, max(dat[:, ext_col_idx]))
         else:
@@ -94,7 +94,7 @@ def scattergrid(ext_col_idx):
             plt.xticks([])
             plt.yticks([])
         plt.xlabel(strs[i-1])
-        plt.ylabel(strs[ext_col_idx])
+        plt.ylabel(strs[ext_col_[idx]])
     scatterplots.set_figheight(8)
     scatterplots.set_figwidth(8)
     plt.tight_layout()
@@ -112,6 +112,8 @@ def cmd_save():
 def cmd_csv():
     return v.writeout()
 def cmd_next():
+    global idx
+    idx += 1 # add ability to break out of program here
     return
 def cmd_quit():
     return quit()
@@ -143,7 +145,7 @@ def get_bins():
     print(color('\n\nYou Chose: ', 'green') + my_range + '\n')
     if my_range:
         my_range = float(my_range)
-        bin_edges = np.arange(0, max(dat[:, ext_col_idx]), my_range)
+        bin_edges = np.arange(0, max(dat[:, ext_col_[idx]]), my_range)
     else:
         bin_edges = 'auto'
     return bin_edges
@@ -190,9 +192,10 @@ vol_col_idx = int(input(vol_col_strs)) - 1
 print(color('\n\nYou chose: ', 'green') + strs[vol_col_idx] + '\n')
 
 # %% Main Loop
-ext_col_idx = promptdatcol()
+idx = 0
+ext_col_ = promptdatcol()
 while True:
-    fig1 = scattergrid(ext_col_idx)
+    fig1 = scattergrid(ext_col_[idx])
     while True:
         v = voldist(dat, strs, get_bins())
         fig2 = v.vdplot()
