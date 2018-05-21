@@ -57,8 +57,8 @@ class voldist(object):
         def subhistplots(num, xvals, yvals, xstr, ystr):
             plt.subplot(2, 1, num)
             plt.bar(self.binlabels, yvals,
-                    width=1, color='green', linewidth=0.2, edgecolor='black',
-                    align='edge') #tick_label=self.realbins[1:]
+                    width=1, color='white', linewidth=1, edgecolor='red',
+                    hatch='////', align='edge') #tick_label=self.realbins[1:]
             plt.xlabel(ystr)
             plt.ylabel(xstr)
             plt.xticks(rotation=90)
@@ -90,14 +90,12 @@ class voldist(object):
         return
 
 def scattergrid(ext_col_idx):
-    gridsize = int(len(dat[0])**0.5)
-    
-    
+    gridsize = 1 + len(dat[0])//2
     scatterplots = plt.figure(num=1, figsize=(8, 8))
-    plt.suptitle(strs[ext_col_idx])
+  # plt.suptitle(strs[ext_col_idx])
     for i in range(1, len(dat[0])+1):
         # creates a grid of scatterplots, per each column pair
-        plt.subplot(gridsize, gridsize, i)
+        plt.subplot(gridsize, 2, i)
         if not i-1 == ext_col_idx:
             plt.scatter(dat[:, i-1], dat[:, ext_col_idx], marker='.', c='black', s=1)
             plt.xlim(0, max(dat[:, i-1]))
