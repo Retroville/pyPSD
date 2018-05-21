@@ -39,6 +39,9 @@ class voldist(object):
       # volbinfracsums = volbinsums / sum(volume)  #                           [0]
         volfrac = volume / sum(volume)  #                                      [0]
         self.volavg = sum(extent * volfrac) / len(extent)  #                   [3]
+        self.navgstr = 'Number average: ' + str(float('%.8f'%(self.numavg)))
+        self.vavgstr = 'Volume average: ' + str(float('%.8f'%(self.volavg)))
+        
 
         self.binlabels = range(0, len(self.volbinsums))
 
@@ -59,10 +62,17 @@ class voldist(object):
             plt.xlabel(ystr)
             plt.ylabel(xstr)
             plt.xticks(rotation=90)
+            plt.annotate(self.navgstr, xy=(0.55, 0.9), xytext=(0.55, 0.9), 
+                         textcoords='axes fraction')
+            plt.annotate(self.vavgstr, xy=(0.55, 0.8), xytext=(0.55, 0.8), 
+                         textcoords='axes fraction')
             return
-        subhistplots(1, self.binlabels, self.counts, self.extstr, 'Counts')
-        subhistplots(2, self.binlabels, self.volbinsums, self.volstr, 'Volume')
+        subhistplots(1, self.binlabels, self.counts, 'Counts', self.extstr)
+        subhistplots(2, self.binlabels, self.volbinsums, 'Volume', self.extstr)
         plt.tight_layout()
+        
+        print(color('Number average: ', 'green') + str(float('%.8f'%(self.numavg))))
+        print(color('Volume average: ', 'green') + str(float('%.8f'%(self.volavg))) + '\n')
         return
 
        # print('Number Average: ', numavg)
