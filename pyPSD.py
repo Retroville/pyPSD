@@ -23,8 +23,8 @@ class voldist(object):
 
         self.volstr = strs[vol_col_idx]
         volume = dat[:, vol_col_idx]
-        self.extstr = strs[ext_col_[idx]]
-        extent = dat[:, ext_col_[idx]]  # formats primary data and volume columns
+        self.extstr = strs[ext_col_idx]
+        extent = dat[:, ext_col_idx]  # formats primary data and volume columns
 
         self.counts, self.realbins = np.histogram(extent, bins=bin_edges)  #   [1]
 
@@ -79,28 +79,34 @@ class voldist(object):
         print(color('\n\nshant pass', 'blue') + '\n')
         return
 
-def scattergrid(ext_col_):
+def scattergrid(ext_col_idx):
     scatterplots = plt.figure(num=1, figsize=(8, 8))
-    plt.suptitle(strs[ext_col_[idx]])
+    plt.suptitle(strs[ext_col_idx])
     for i in range(1, len(dat[0])+1):
         # creates a grid of scatterplots, per each column pair
         plt.subplot(2, 2, i)
-        if not i-1 == ext_col_[idx]:
-            plt.scatter(dat[:, i-1], dat[:, ext_col_[idx]], marker='.', c='black', s=1)
+        if not i-1 == ext_col_idx:
+            plt.scatter(dat[:, i-1], dat[:, ext_col_idx], marker='.', c='black', s=1)
             plt.xlim(0, max(dat[:, i-1]))
-          # plt.ylim(0, max(dat[:, ext_col_idx]))
+          # plt.ylim(0, max(dat[:, ext_col_idx-1]))
         else:
             plt.plot([0,0,1,1,0,1,1,0],[0,1,0,1,0,0,1,1],'r')
             plt.xticks([])
             plt.yticks([])
         plt.xlabel(strs[i-1])
-        plt.ylabel(strs[ext_col_[idx]])
+        plt.ylabel(strs[ext_col_idx])
     scatterplots.set_figheight(8)
     scatterplots.set_figwidth(8)
     plt.tight_layout()
     plt.show(block=False)
     return
 
+def clearplots():
+    plt.figure(1)
+    plt.clf()
+    plt.figure(2)
+    plt.clf()
+    
 # %% Menu
 def cmd_save():
     plt.figure(1)
@@ -111,9 +117,12 @@ def cmd_save():
     return
 def cmd_csv():
     return v.writeout()
-def cmd_next():
+def cmd_next(direction):
+    clearplots()
     global idx
+    global sig
     idx += 1 # add ability to break out of program here
+    sig = False
     return
 def cmd_quit():
     return quit()
@@ -122,10 +131,10 @@ def menu_cmd():
     OPTIONS = {"bins":dict( desc = "Change bins of currently active distribution plot", func = None), # wew lad
                "save":dict( desc = "Save currently active plots as images", func = cmd_save),
                "csv":dict( desc = "Export currently active plots to csv file", func = cmd_csv),
-               "next":dict( desc = "Select new data column (retains volume column selection", func = cmd_next),
+               "next":dict( desc = "Select next data column (retains volume column selection)", func = cmd_next),
                "quit":dict( desc = "Exits the program", func = cmd_quit)}
 
-    while True:
+    while sig == True:
         print("\nPlease choose an option:")
         for key in OPTIONS.keys():
             print("\t" + key + "\t" + OPTIONS[key]["desc"])
@@ -145,7 +154,7 @@ def get_bins():
     print(color('\n\nYou Chose: ', 'green') + my_range + '\n')
     if my_range:
         my_range = float(my_range)
-        bin_edges = np.arange(0, max(dat[:, ext_col_[idx]]), my_range)
+        bin_edges = np.arange(0, max(dat[:, ext_col_idx]), my_range)
     else:
         bin_edges = 'auto'
     return bin_edges
@@ -192,11 +201,18 @@ vol_col_idx = int(input(vol_col_strs)) - 1
 print(color('\n\nYou chose: ', 'green') + strs[vol_col_idx] + '\n')
 
 # %% Main Loop
+
 idx = 0
 ext_col_ = promptdatcol()
 while True:
-    fig1 = scattergrid(ext_col_[idx])
-    while True:
+    if type(ext_col_) is int:
+        ext_col_idx = ext_col_
+        fig1 = scattergrid(ext_col_)
+    else:
+        ext_col_idx = ext_col_[idx]
+        fig1 = scattergrid(ext_col_[idx])
+    sig = True
+    while sig == True:
         v = voldist(dat, strs, get_bins())
         fig2 = v.vdplot()
         plt.show()
