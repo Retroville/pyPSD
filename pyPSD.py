@@ -30,10 +30,10 @@ class voldist(object):
 
         self.numavg = sum(extent) / len(extent)  #                             [0]
 
-        idx = np.searchsorted(self.realbins, extent, 'right')
+        fidx = np.searchsorted(self.realbins, extent, 'right')
 
         for i in range(1, len(self.realbins)):  #                              [2]
-            logc = idx == i
+            logc = fidx == i
             self.volbinsums.append(sum(volume[logc]))
 
       # volbinfracsums = volbinsums / sum(volume)  #                           [0]
@@ -88,7 +88,7 @@ def scattergrid(ext_col_idx):
         if not i-1 == ext_col_idx:
             plt.scatter(dat[:, i-1], dat[:, ext_col_idx], marker='.', c='black', s=1)
             plt.xlim(0, max(dat[:, i-1]))
-          # plt.ylim(0, max(dat[:, ext_col_idx]))
+          # plt.ylim(0, max(dat[:, ext_col_idx-1]))
         else:
             plt.plot([0,0,1,1,0,1,1,0],[0,1,0,1,0,0,1,1],'r')
             plt.xticks([])
@@ -101,6 +101,12 @@ def scattergrid(ext_col_idx):
     plt.show(block=False)
     return
 
+def clearplots():
+    plt.figure(1)
+    plt.clf()
+    plt.figure(2)
+    plt.clf()
+    
 # %% Menu
 def cmd_save():
     plt.figure(1)
@@ -111,20 +117,24 @@ def cmd_save():
     return
 def cmd_csv():
     return v.writeout()
-def cmd_next():
+def cmd_next(direction):
+    clearplots()
+    global idx
+    global sig
+    idx += 1 # add ability to break out of program here
+    sig = False
     return
 def cmd_quit():
-    quit()
-    return
+    return quit()
 
 def menu_cmd():
     OPTIONS = {"bins":dict( desc = "Change bins of currently active distribution plot", func = None), # wew lad
                "save":dict( desc = "Save currently active plots as images", func = cmd_save),
                "csv":dict( desc = "Export currently active plots to csv file", func = cmd_csv),
-               "next":dict( desc = "Select new data column (retains volume column selection", func = cmd_next),
+               "next":dict( desc = "Select next data column (retains volume column selection)", func = cmd_next),
                "quit":dict( desc = "Exits the program", func = cmd_quit)}
 
-    while True:
+    while sig == True:
         print("\nPlease choose an option:")
         for key in OPTIONS.keys():
             print("\t" + key + "\t" + OPTIONS[key]["desc"])
@@ -152,8 +162,14 @@ def get_bins():
 
 def promptdatcol():
     ext_col_strs = 'Select the data column:\n' + '\n'.join(dat_prompt_strs)
-    ext_col_idx = int(input(ext_col_strs)) - 1
-    print(color('\n\nYou chose: ', 'green') + strs[ext_col_idx] + '\n')
+    #ext_col_idx = input(ext_col_strs)
+    ext_col_idx = input(ext_col_strs)
+    if ',' not in ext_col_idx:
+        ext_col_idx = int(ext_col_idx)-1
+        print(color('\n\nYou chose: ', 'green') + strs[ext_col_idx] + '\n')
+    else:
+        ext_col_idx = [int(i)-1 for i in ext_col_idx.split(',')]
+        print(color('\n\nYou chose: ', 'green') + 'Multiple input columns' + '\n')
     return ext_col_idx
     # Imports data based on prompt results    
 
@@ -185,10 +201,18 @@ vol_col_idx = int(input(vol_col_strs)) - 1
 print(color('\n\nYou chose: ', 'green') + strs[vol_col_idx] + '\n')
 
 # %% Main Loop
-ext_col_idx = promptdatcol()
+
+idx = 0
+ext_col_ = promptdatcol()
 while True:
-    fig1 = scattergrid(ext_col_idx)
-    while True:
+    if type(ext_col_) is int:
+        ext_col_idx = ext_col_
+        fig1 = scattergrid(ext_col_)
+    else:
+        ext_col_idx = ext_col_[idx]
+        fig1 = scattergrid(ext_col_[idx])
+    sig = True
+    while sig == True:
         v = voldist(dat, strs, get_bins())
         fig2 = v.vdplot()
         plt.show()
