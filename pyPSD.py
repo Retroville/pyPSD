@@ -80,11 +80,14 @@ class voldist(object):
         return
 
 def scattergrid(ext_col_idx):
+    gridsize = int(len(dat[0])**0.5)
+    
+    
     scatterplots = plt.figure(num=1, figsize=(8, 8))
     plt.suptitle(strs[ext_col_idx])
     for i in range(1, len(dat[0])+1):
         # creates a grid of scatterplots, per each column pair
-        plt.subplot(2, 2, i)
+        plt.subplot(gridsize, gridsize, i)
         if not i-1 == ext_col_idx:
             plt.scatter(dat[:, i-1], dat[:, ext_col_idx], marker='.', c='black', s=1)
             plt.xlim(0, max(dat[:, i-1]))
@@ -117,7 +120,7 @@ def cmd_save():
     return
 def cmd_csv():
     return v.writeout()
-def cmd_next(direction):
+def cmd_next():
     clearplots()
     global idx
     global sig
