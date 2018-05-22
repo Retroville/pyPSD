@@ -15,7 +15,7 @@ my_range = []
 
 # %% Calculations
 class voldist(object):
-    def __init__(self, dat, strs, bin_edges, typ):
+    def __init__(self, dat, strs, bin_edges):
         self.dat = dat
         self.strs = strs
         self.volbinsums = []
@@ -38,10 +38,10 @@ class voldist(object):
 
       # volbinfracsums = volbinsums / sum(volume)  #                        [0]
         volfrac = volume / sum(volume)  #                                   [0]
-        if typ == (0,0):
-            self.volavg = sum(extent * volfrac) / len(extent)  #            [3] Weighted
-        else:
-            self.volavg = sum(extent**typ[0])/sum(extent**typ[1])
+    #    if typ == (0,0):
+        self.volavg = sum(extent * volfrac) / len(extent)  #            [3] Weighted
+      #  else:
+       #     self.volavg = sum(extent**typ[0])/sum(extent**typ[1])
         
         
         self.navgstr = 'Number average: ' + str(float('%.8f'%(self.numavg)))
@@ -214,7 +214,7 @@ print(color('\n\nYou chose: ', 'green') + strs[vol_col_idx] + '\n')
 # %% Main Loop
 
 idx = 0
-average_method = (0,0) 
+typ = (3,2) 
     # Specifiy method of determining volume average:
     # (Leave blank to calculate weighted average)
     # Fill in according to D[x,y] parameter
@@ -230,7 +230,7 @@ while True:
         fig1 = scattergrid(ext_col_[idx])
     sig = True
     while sig == True:
-        v = voldist(dat, strs, get_bins(), (0,0))
+        v = voldist(dat, strs, get_bins())
         fig2 = v.vdplot()
         plt.show()
         menu_cmd()
