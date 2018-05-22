@@ -26,7 +26,7 @@ class voldist(object):
         self.extstr = strs[ext_col_idx]
         extent = dat[:, ext_col_idx]  # formats primary data and volume columns
 
-        self.counts, self.realbins = np.histogram(extent, bins=bin_edges)   [1]
+        self.counts, self.realbins = np.histogram(extent, bins=bin_edges) # [1]
 
         self.numavg = sum(extent) / len(extent)  #                          [0]
 
@@ -38,10 +38,10 @@ class voldist(object):
 
       # volbinfracsums = volbinsums / sum(volume)  #                        [0]
         volfrac = volume / sum(volume)  #                                   [0]
-    #    if typ == (0,0):
-        self.volavg = sum(extent * volfrac) / len(extent)  #            [3] Weighted
-      #  else:
-       #     self.volavg = sum(extent**typ[0])/sum(extent**typ[1])
+        if typ == (0,0):
+            self.volavg = sum(extent * volfrac) / len(extent)  #            [3] Weighted
+        else:
+            self.volavg = sum(extent**typ[0])/sum(extent**typ[1])
         
         
         self.navgstr = 'Number average: ' + str(float('%.8f'%(self.numavg)))
@@ -60,7 +60,7 @@ class voldist(object):
 
         def subhistplots(num, xvals, yvals, xstr, ystr):
             plt.subplot(2, 1, num)
-            plt.bar(self.binlabels, yvals,
+            plt.bar(xvals, yvals,
                     width=1, color='white', linewidth=1, edgecolor='red',
                     hatch='////', align='edge')
             plt.xlabel(ystr)
@@ -173,7 +173,6 @@ def get_bins():
 
 def promptdatcol():
     ext_col_strs = 'Select the data column:\n' + '\n'.join(dat_prompt_strs)
-    #ext_col_idx = input(ext_col_strs)
     ext_col_idx = input(ext_col_strs)
     if ',' not in ext_col_idx:
         ext_col_idx = int(ext_col_idx)-1
@@ -214,7 +213,7 @@ print(color('\n\nYou chose: ', 'green') + strs[vol_col_idx] + '\n')
 # %% Main Loop
 
 idx = 0
-typ = (3,2) 
+typ = (0,0) 
     # Specifiy method of determining volume average:
     # (Leave blank to calculate weighted average)
     # Fill in according to D[x,y] parameter
