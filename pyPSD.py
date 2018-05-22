@@ -15,7 +15,7 @@ my_range = []
 
 # %% Calculations
 class voldist(object):
-    def __init__(self, dat, strs, bin_edges):
+    def __init__(self, dat, strs, bin_edges, typ):
         self.dat = dat
         self.strs = strs
         self.volbinsums = []
@@ -26,22 +26,26 @@ class voldist(object):
         self.extstr = strs[ext_col_idx]
         extent = dat[:, ext_col_idx]  # formats primary data and volume columns
 
-        self.counts, self.realbins = np.histogram(extent, bins=bin_edges)  #   [1]
+        self.counts, self.realbins = np.histogram(extent, bins=bin_edges)   [1]
 
-        self.numavg = sum(extent) / len(extent)  #                             [0]
+        self.numavg = sum(extent) / len(extent)  #                          [0]
 
         fidx = np.searchsorted(self.realbins, extent, 'right')
 
-        for i in range(1, len(self.realbins)):  #                              [2]
+        for i in range(1, len(self.realbins)):  #                           [2]
             logc = fidx == i
             self.volbinsums.append(sum(volume[logc]))
 
-      # volbinfracsums = volbinsums / sum(volume)  #                           [0]
-        volfrac = volume / sum(volume)  #                                      [0]
-        self.volavg = sum(extent * volfrac) / len(extent)  #                   [3]
+      # volbinfracsums = volbinsums / sum(volume)  #                        [0]
+        volfrac = volume / sum(volume)  #                                   [0]
+        if typ == (0,0):
+            self.volavg = sum(extent * volfrac) / len(extent)  #            [3] Weighted
+        else:
+            self.volavg = sum(extent**typ[0])/sum(extent**typ[1])
+        
+        
         self.navgstr = 'Number average: ' + str(float('%.8f'%(self.numavg)))
         self.vavgstr = 'Volume average: ' + str(float('%.8f'%(self.volavg)))
-        
 
         self.binlabels = range(0, len(self.volbinsums))
 
@@ -58,13 +62,13 @@ class voldist(object):
             plt.subplot(2, 1, num)
             plt.bar(self.binlabels, yvals,
                     width=1, color='white', linewidth=1, edgecolor='red',
-                    hatch='////', align='edge') #tick_label=self.realbins[1:]
+                    hatch='////', align='edge')
             plt.xlabel(ystr)
             plt.ylabel(xstr)
             plt.xticks(rotation=90)
             plt.annotate(self.navgstr, xy=(0.55, 0.9), xytext=(0.55, 0.9), 
                          textcoords='axes fraction')
-            plt.annotate(self.vavgstr, xy=(0.55, 0.8), xytext=(0.55, 0.8), 
+            plt.annotate(self.vavgstr, xy=(0.55, 0.8), xytext=(0.55, 0.8),
                          textcoords='axes fraction')
             return
         subhistplots(1, self.binlabels, self.counts, 'Counts', self.extstr)
@@ -75,15 +79,12 @@ class voldist(object):
         print(color('Volume average: ', 'green') + str(float('%.8f'%(self.volavg))) + '\n')
         return
 
-       # print('Number Average: ', numavg)
-       # print('Volume Average: (Warning) ', volavg)
-
     def writeout(self):
         binout = self.realbins[1:]
         ostr = [self.extstr, 'Counts', 'Volume']
         odat = np.column_stack([binout, self.counts, self.volbinsums])
         out = np.vstack([ostr,odat])
-        with open('../data/output.csv', 'wb',) as csvout:
+        with open('../data/output.csv', 'wb') as csvout:
             outputwriter = csv.writer(csvout, delimiter=',')
             outputwriter.writerows(out)
         print(color('\n\nshant pass', 'blue') + '\n')
@@ -92,7 +93,7 @@ class voldist(object):
 def scattergrid(ext_col_idx):
     gridsize = 1 + len(dat[0])//2
     scatterplots = plt.figure(num=1, figsize=(8, 8))
-  # plt.suptitle(strs[ext_col_idx])
+    plt.suptitle(strs[ext_col_idx])
     for i in range(1, len(dat[0])+1):
         # creates a grid of scatterplots, per each column pair
         plt.subplot(gridsize, 2, i)
@@ -101,14 +102,13 @@ def scattergrid(ext_col_idx):
             plt.xlim(0, max(dat[:, i-1]))
           # plt.ylim(0, max(dat[:, ext_col_idx-1]))
         else:
-            plt.plot([0,0,1,1,0,1,1,0],[0,1,0,1,0,0,1,1],'r')
+            plt.plot([0, 0, 1, 1, 0, 1, 1, 0],[0, 1, 0, 1, 0, 0, 1, 1],'r')
             plt.xticks([])
             plt.yticks([])
         plt.xlabel(strs[i-1])
-        plt.ylabel(strs[ext_col_idx])
     scatterplots.set_figheight(8)
     scatterplots.set_figwidth(8)
-    plt.tight_layout()
+    plt.gcf().tight_layout()
     plt.show(block=False)
     return
 
@@ -132,7 +132,7 @@ def cmd_next():
     clearplots()
     global idx
     global sig
-    idx += 1 # add ability to break out of program here
+    idx += 1
     sig = False
     return
 def cmd_quit():
@@ -167,7 +167,7 @@ def get_bins():
         my_range = float(my_range)
         bin_edges = np.arange(0, max(dat[:, ext_col_idx]), my_range)
     else:
-        bin_edges = 'auto'
+        bin_edges = 20
     return bin_edges
 
 
@@ -214,6 +214,12 @@ print(color('\n\nYou chose: ', 'green') + strs[vol_col_idx] + '\n')
 # %% Main Loop
 
 idx = 0
+average_method = (0,0) 
+    # Specifiy method of determining volume average:
+    # (Leave blank to calculate weighted average)
+    # Fill in according to D[x,y] parameter
+    # e.g.: De Brouckere mean dia. = (4,3),  Sauter mean dia. = (3,2)
+
 ext_col_ = promptdatcol()
 while True:
     if type(ext_col_) is int:
@@ -224,7 +230,7 @@ while True:
         fig1 = scattergrid(ext_col_[idx])
     sig = True
     while sig == True:
-        v = voldist(dat, strs, get_bins())
+        v = voldist(dat, strs, get_bins(), (0,0))
         fig2 = v.vdplot()
         plt.show()
         menu_cmd()
