@@ -40,7 +40,7 @@ class voldist(object):
       # volbinfracsums = volbinsums / sum(volume)  #                        [0]
         volfrac = volume / sum(volume)  #                                   [0]
         if typ == (0,0):
-            self.volavg = sum(extent * volfrac) / len(extent)  #            [3] Weighted
+            self.volavg = sum(extent * volfrac) / sum(volfrac)  #            [3] Weighted
         else:
             self.volavg = sum(extent**typ[0])/sum(extent**typ[1])
         
@@ -73,7 +73,7 @@ class voldist(object):
             return
         subhistplots(1, self.binlabels, self.counts, 'Counts', self.extstr)
         subhistplots(2, self.binlabels, self.volbinsums, 'Volume', self.extstr)
-        plt.tight_layout()
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
                 
         print(color('Number average: ', 'green') + str(float('%.8f'%(self.numavg))))
         print(color('Volume average: ', 'green') + str(float('%.8f'%(self.volavg))) + '\n')
@@ -87,7 +87,7 @@ class voldist(object):
         with open('../data/output.csv', 'wb') as csvout:
             outputwriter = csv.writer(csvout, delimiter=',')
             outputwriter.writerows(out)
-        print(color('\n\nshant pass', 'blue') + '\n')
+            print(color("\n\nPlot saved as output.csv", 'green') + '\n')
         return
 
 def scattergrid(ext_col_idx):
@@ -108,7 +108,7 @@ def scattergrid(ext_col_idx):
         plt.xlabel(strs[i-1])
     scatterplots.set_figheight(8)
     scatterplots.set_figwidth(8)
-    plt.gcf().tight_layout()
+    plt.gcf().tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show(block=False)
     return
 
@@ -160,7 +160,7 @@ def menu_cmd():
 
 # %% Data Import & Prompt
 def get_bins():
-    my_range = input('Input the range of the x axis bins: \n'
+    my_range = input('Input the range of the x axis histogram bins: \n'
                      '(Leave blank to bin automatically)')
     print(color('\n\nYou Chose: ', 'green') + my_range + '\n')
     if my_range:
@@ -172,7 +172,7 @@ def get_bins():
 
 
 def promptdatcol():
-    ext_col_strs = 'Select the data column:\n' + '\n'.join(dat_prompt_strs)
+    ext_col_strs = 'Select the data column(s):\n' + '\n'.join(dat_prompt_strs)
     ext_col_idx = input(ext_col_strs)
     if ',' not in ext_col_idx:
         ext_col_idx = int(ext_col_idx)-1
@@ -213,7 +213,7 @@ print(color('\n\nYou chose: ', 'green') + strs[vol_col_idx] + '\n')
 # %% Main Loop
 
 idx = 0
-typ = (0,0) 
+typ = (4,3) 
     # Specifiy method of determining volume average:
     # (Leave blank to calculate weighted average)
     # Fill in according to D[x,y] parameter
