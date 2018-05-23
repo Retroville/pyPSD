@@ -27,6 +27,7 @@ class voldist(object):
         extent = dat[:, ext_col_idx]  # formats primary data and volume columns
 
         self.counts, self.realbins = np.histogram(extent, bins=bin_edges) # [1]
+        plt.show
 
         self.numavg = sum(extent) / len(extent)  #                          [0]
 
@@ -48,7 +49,6 @@ class voldist(object):
         self.vavgstr = 'Volume average: ' + str(float('%.8f'%(self.volavg)))
 
         self.binlabels = range(0, len(self.volbinsums))
-
         return
 
 # %% Plotting and output
@@ -61,8 +61,8 @@ class voldist(object):
         def subhistplots(num, xvals, yvals, xstr, ystr):
             plt.subplot(2, 1, num)
             plt.bar(xvals, yvals,
-                    width=1, color='white', linewidth=1, edgecolor='red',
-                    hatch='////', align='edge')
+                    width=--1, color='white', linewidth=1, edgecolor='red',
+                    hatch='////', align='edge', tick_label=np.around(self.realbins[1:],5))
             plt.xlabel(ystr)
             plt.ylabel(xstr)
             plt.xticks(rotation=90)
@@ -74,7 +74,7 @@ class voldist(object):
         subhistplots(1, self.binlabels, self.counts, 'Counts', self.extstr)
         subhistplots(2, self.binlabels, self.volbinsums, 'Volume', self.extstr)
         plt.tight_layout()
-        
+                
         print(color('Number average: ', 'green') + str(float('%.8f'%(self.numavg))))
         print(color('Volume average: ', 'green') + str(float('%.8f'%(self.volavg))) + '\n')
         return
