@@ -13,6 +13,8 @@ from textwrap import wrap
 
 try:
     os.makedirs('../output/')
+    os.makedirs('../output/scatterplots')
+    os.makedirs('../output/distributions')
 except OSError as e:
     if e.errno != errno.EEXIST:
         raise
@@ -134,9 +136,9 @@ class voldist(object):
     
     def saveout(self):
         plt.figure(1)
-        plt.savefig('../output/' + self.current_file_name + '_scatter', bbox_inches='tight')
+        plt.savefig('../output/scatterplots/' + self.current_file_name + '_sctr', bbox_inches='tight')
         plt.figure(2)
-        plt.savefig('../output/' + self.current_file_name + '_distribution', bbox_inches='tight')
+        plt.savefig('../output/distributions/' + self.current_file_name + '_dist', bbox_inches='tight')
         print(color("Plots saved as ", 'green') + self.current_file_name + 
                     '_scatter.png' + color(" and ", 'green') + 
                     self.current_file_name + '_distribution.png' + 
