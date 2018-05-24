@@ -3,8 +3,16 @@ import unicodecsv as csv
 import numpy as np
 import matplotlib.pyplot as plt
 from termcolor import colored as color
+import os
+import errno
 # import tkinter as tk
 # from tkinter import filedialog
+
+try:
+    os.makedirs('../output/')
+except OSError as e:
+    if e.errno != errno.EEXIST:
+        raise
 
 vol_col = []
 ext_col = []
@@ -49,6 +57,8 @@ class voldist(object):
         self.vavgstr = 'Volume average: ' + str(float('%.8f'%(self.volavg)))
 
         self.binlabels = range(0, len(self.volbinsums))
+        
+        self.current_file_name = "".join([x if x.isalnum() else "_" for x in self.extstr])
         return
 
 # %% Plotting and output
@@ -84,12 +94,23 @@ class voldist(object):
         ostr = [self.extstr, 'Counts', 'Volume']
         odat = np.column_stack([binout, self.counts, self.volbinsums])
         out = np.vstack([ostr,odat])
-        with open('../data/output.csv', 'wb') as csvout:
+        with open('../output/' + self.current_file_name + '_output.csv', 'wb') as csvout:
             outputwriter = csv.writer(csvout, delimiter=',')
             outputwriter.writerows(out)
             print(color("\n\nPlot saved as output.csv", 'green') + '\n')
         return
-
+    
+    def saveout(self):
+        plt.figure(1)
+        plt.savefig('../output/' + self.current_file_name + '_scatter')
+        plt.figure(2)
+        plt.savefig('../output/' + self.current_file_name + '_distribution')
+        print(color("\n\nPlots saved as ", 'green') + self.current_file_name + 
+                    '_scatter.png' + color(" and ", 'green') + 
+                    self.current_file_name + '_distribution.png' + 
+                    color(" in ", 'green') + "../output/ " + 
+                    color("directory\n", 'green'))
+        
 def scattergrid(ext_col_idx):
     gridsize = 1 + len(dat[0])//2
     scatterplots = plt.figure(num=1, figsize=(8, 8))
@@ -108,7 +129,7 @@ def scattergrid(ext_col_idx):
         plt.xlabel(strs[i-1])
     scatterplots.set_figheight(8)
     scatterplots.set_figwidth(8)
-    plt.gcf().tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.gcf().tight_layout() # rect=[0, 0.03, 1, 0.95]
     plt.show(block=False)
     return
 
@@ -120,12 +141,7 @@ def clearplots():
     
 # %% Menu
 def cmd_save():
-    plt.figure(1)
-    plt.savefig('scatter')
-    plt.figure(2)
-    plt.savefig('dist')
-    print(color("\n\nPlots saved as scatter.png and dist.png", 'green') + '\n')
-    return
+    return v.saveout()
 def cmd_csv():
     return v.writeout()
 def cmd_next():
@@ -213,7 +229,7 @@ print(color('\n\nYou chose: ', 'green') + strs[vol_col_idx] + '\n')
 # %% Main Loop
 
 idx = 0
-typ = (4,3) 
+typ = (3,2) 
     # Specifiy method of determining volume average:
     # (Leave blank to calculate weighted average)
     # Fill in according to D[x,y] parameter
