@@ -5,6 +5,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from termcolor import colored as color
+<<<<<<< HEAD
 import os
 import errno
 from textwrap import wrap
@@ -19,6 +20,11 @@ except OSError as e:
     if e.errno != errno.EEXIST:
         raise
 
+=======
+# import tkinter as tk
+# from tkinter import filedialog
+
+>>>>>>> parent of 2df0d1d... pre-multivalue
 vol_col = []
 ext_col = []
 dat = []
@@ -79,8 +85,6 @@ class voldist(object):
         self.vavgstr_43 = 'Volume Average D[4,3]: ' + str(float('%.8f'%(self.volavg_43)))
         
         self.binlabels = range(0, len(self.volbinsums))
-        
-        self.current_file_name = "".join([x if x.isalnum() else "_" for x in self.extstr])
         return
 
 # %% Plotting and output
@@ -128,11 +132,12 @@ class voldist(object):
         ostr = [self.extstr, 'Counts', 'Volume']
         odat = np.column_stack([binout, self.counts, self.volbinsums])
         out = np.vstack([ostr,odat])
-        with open('../output/' + self.current_file_name + '_output.csv', 'wb') as csvout:
+        with open('../data/output.csv', 'wb') as csvout:
             outputwriter = csv.writer(csvout, delimiter=',')
             outputwriter.writerows(out)
             print(color("\n\nPlot saved as output.csv", 'green') + '\n')
         return
+<<<<<<< HEAD
     
     def saveout(self):
         plt.figure(1)
@@ -145,6 +150,9 @@ class voldist(object):
                     color(" in ", 'green') + "../output/ " + 
                     color("directory", 'green'))
         
+=======
+
+>>>>>>> parent of 2df0d1d... pre-multivalue
 def scattergrid(ext_col_idx):
     gridsize = 1 + len(dat[0])//6
     scatterplots = plt.figure(num=1, figsize=(gridsize*2, gridsize*2.2))
@@ -161,12 +169,19 @@ def scattergrid(ext_col_idx):
             plt.plot([0, 0, 1, 1, 0, 1, 1, 0],[0, 1, 0, 1, 0, 0, 1, 1],'r')
             plt.xticks([])
             plt.yticks([])
+<<<<<<< HEAD
         plt.xlabel('\n'.join(wrap(strs[i-1],30)), fontsize=8)
         plt.xticks(fontsize=8)
         plt.yticks(fontsize=8)
     scatterplots.set_figheight(gridsize*2)
     scatterplots.set_figwidth(gridsize*2.2)
     plt.gcf().tight_layout() # rect=[0, 0.03, 1, 0.95]
+=======
+        plt.xlabel(strs[i-1])
+    scatterplots.set_figheight(8)
+    scatterplots.set_figwidth(8)
+    plt.gcf().tight_layout(rect=[0, 0.03, 1, 0.95])
+>>>>>>> parent of 2df0d1d... pre-multivalue
     plt.show(block=False)
     return
 
@@ -178,7 +193,12 @@ def clearplots():
     
 # %% Menu
 def cmd_save():
-    return v.saveout()
+    plt.figure(1)
+    plt.savefig('scatter')
+    plt.figure(2)
+    plt.savefig('dist')
+    print(color("\n\nPlots saved as scatter.png and dist.png", 'green') + '\n')
+    return
 def cmd_csv():
     return v.writeout()
 def cmd_next():
@@ -274,7 +294,11 @@ print(color('\n\nYou chose: ', 'green') + strs[vol_col_idx] + '\n')
 # %% Main Loop
 
 idx = 0
+<<<<<<< HEAD
 '''typ = (3,2) '''
+=======
+typ = (4,3) 
+>>>>>>> parent of 2df0d1d... pre-multivalue
     # Specifiy method of determining volume average:
     # (Leave blank to calculate weighted average)
     # Fill in according to D[x,y] parameter
