@@ -1,9 +1,8 @@
 # %% Initialization
 import unicodecsv as csv
 import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 from termcolor import colored as color
 import os
 import errno
@@ -113,12 +112,12 @@ class voldist(object):
                     color("directory", 'green'))
         
 def scattergrid(ext_col_idx):
-    gridsize = 1 + len(dat[0])//3
-    scatterplots = plt.figure(num=1, figsize=(gridsize*2, gridsize*2.2))
+    gridsize = 1 + len(dat[0])//2
+    scatterplots = plt.figure(num=1, figsize=(11, 8.5))
     plt.suptitle(strs[ext_col_idx])
     for i in range(1, len(dat[0])+1):
         # creates a grid of scatterplots, per each column pair
-        plt.subplot(gridsize, 3, i)
+        plt.subplot(gridsize, 2, i)
         if not i-1 == ext_col_idx:
             plt.scatter(dat[:, i-1], dat[:, ext_col_idx], marker='.', c='black', s=1)
             plt.xlim(0, max(dat[:, i-1]))
@@ -130,8 +129,8 @@ def scattergrid(ext_col_idx):
         plt.xlabel('\n'.join(wrap(strs[i-1],30)), fontsize=8)
         plt.xticks(fontsize=8)
         plt.yticks(fontsize=8)
-    scatterplots.set_figheight(gridsize*2)
-    scatterplots.set_figwidth(gridsize*2.2)
+    scatterplots.set_figheight(8.5)
+    scatterplots.set_figwidth(11)
     plt.gcf().tight_layout() # rect=[0, 0.03, 1, 0.95]
     plt.show(block=False)
     return
@@ -178,6 +177,14 @@ def menu_cmd():
     return
 
 # %% Data Import & Prompt
+def report_prompt():
+    report_prompt_ans = input('Enter report mode? (Y/N)')
+    print(report_prompt_ans)
+    if any(c in report_prompt_ans for c in ('y', 'Y')):
+        return True
+    else:
+        return False
+
 def get_bins():
     my_range = input('Input the range of the x axis histogram bins: \n'
                      '(Leave blank to bin automatically)')
@@ -242,6 +249,10 @@ typ = (3,2)
     # e.g.: De Brouckere mean dia. = (4,3),  Sauter mean dia. = (3,2)
 
 ext_col_ = promptdatcol()
+reportmode = report_prompt()
+if reportmode is True:
+    matplotlib.use('Agg')
+
 while True:
     if type(ext_col_) is int:
         ext_col_idx = ext_col_
