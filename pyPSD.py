@@ -213,7 +213,7 @@ def menu_cmd():
 
 # %% Data Import & Prompt
 def get_bins():
-    '''my_range = input('Input the range of the x axis histogram bins: \n'
+    my_range = input('Input the range of the x axis histogram bins: \n'
                      '(Leave blank to bin automatically)')
     print(color('\n\nYou Chose: ', 'green') + my_range + '\n')
     if my_range:
@@ -221,9 +221,11 @@ def get_bins():
         bin_edges = np.arange(0, max(dat[:, ext_col_idx]), my_range)
     else:
         bin_edges = 20
-    return bin_edges'''
+    return bin_edges
+    '''
     bin_edges = 20
     return bin_edges
+    '''
 
 
 def promptdatcol():
@@ -291,6 +293,5 @@ while True:
         v = voldist(dat, strs, get_bins())
         fig2 = v.vdplot()
         plt.show(block=False)
-      # menu_cmd()
-        cmd_save()
-        cmd_next()
+        menu_cmd()
+
