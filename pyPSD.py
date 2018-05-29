@@ -2,9 +2,12 @@
 import unicodecsv as csv
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 from termcolor import colored as color
 import os
 import errno
+from textwrap import wrap
 # import tkinter as tk
 # from tkinter import filedialog
 
@@ -84,9 +87,8 @@ class voldist(object):
         subhistplots(1, self.binlabels, self.counts, 'Counts', self.extstr)
         subhistplots(2, self.binlabels, self.volbinsums, 'Volume', self.extstr)
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-                
-        print(color('Number average: ', 'green') + str(float('%.8f'%(self.numavg))))
-        print(color('Volume average: ', 'green') + str(float('%.8f'%(self.volavg))) + '\n')
+        
+        print(color('Plot created...', 'green'))
         return
 
     def writeout(self):
@@ -102,22 +104,21 @@ class voldist(object):
     
     def saveout(self):
         plt.figure(1)
-        plt.savefig('../output/' + self.current_file_name + '_scatter')
+        plt.savefig('../output/' + self.current_file_name + '_scatter', bbox_inches='tight')
         plt.figure(2)
-        plt.savefig('../output/' + self.current_file_name + '_distribution')
-        print(color("\n\nPlots saved as ", 'green') + self.current_file_name + 
+        plt.savefig('../output/' + self.current_file_name + '_distribution', bbox_inches='tight')
+        print(color("Plots saved as ", 'green') + self.current_file_name + 
                     '_scatter.png' + color(" and ", 'green') + 
                     self.current_file_name + '_distribution.png' + 
-                    color(" in ", 'green') + "../output/ " + 
-                    color("directory\n", 'green'))
+                    color("directory", 'green'))
         
 def scattergrid(ext_col_idx):
-    gridsize = 1 + len(dat[0])//2
-    scatterplots = plt.figure(num=1, figsize=(8, 8))
+    gridsize = 1 + len(dat[0])//3
+    scatterplots = plt.figure(num=1, figsize=(gridsize*2, gridsize*2.2))
     plt.suptitle(strs[ext_col_idx])
     for i in range(1, len(dat[0])+1):
         # creates a grid of scatterplots, per each column pair
-        plt.subplot(gridsize, 2, i)
+        plt.subplot(gridsize, 3, i)
         if not i-1 == ext_col_idx:
             plt.scatter(dat[:, i-1], dat[:, ext_col_idx], marker='.', c='black', s=1)
             plt.xlim(0, max(dat[:, i-1]))
@@ -126,9 +127,11 @@ def scattergrid(ext_col_idx):
             plt.plot([0, 0, 1, 1, 0, 1, 1, 0],[0, 1, 0, 1, 0, 0, 1, 1],'r')
             plt.xticks([])
             plt.yticks([])
-        plt.xlabel(strs[i-1])
-    scatterplots.set_figheight(8)
-    scatterplots.set_figwidth(8)
+        plt.xlabel('\n'.join(wrap(strs[i-1],30)), fontsize=8)
+        plt.xticks(fontsize=8)
+        plt.yticks(fontsize=8)
+    scatterplots.set_figheight(gridsize*2)
+    scatterplots.set_figwidth(gridsize*2.2)
     plt.gcf().tight_layout() # rect=[0, 0.03, 1, 0.95]
     plt.show(block=False)
     return
@@ -190,12 +193,15 @@ def get_bins():
 def promptdatcol():
     ext_col_strs = 'Select the data column(s):\n' + '\n'.join(dat_prompt_strs)
     ext_col_idx = input(ext_col_strs)
-    if ',' not in ext_col_idx:
-        ext_col_idx = int(ext_col_idx)-1
-        print(color('\n\nYou chose: ', 'green') + strs[ext_col_idx] + '\n')
-    else:
+    if ',' in ext_col_idx:
         ext_col_idx = [int(i)-1 for i in ext_col_idx.split(',')]
         print(color('\n\nYou chose: ', 'green') + 'Multiple input columns' + '\n')
+    elif ':' in ext_col_idx:
+        minmax = [int(i)-1 for i in ext_col_idx.split(':')]
+        ext_col_idx = range(minmax[0],minmax[1]+1)
+    else:
+        ext_col_idx = int(ext_col_idx)-1
+        print(color('\n\nYou chose: ', 'green') + strs[ext_col_idx] + '\n')
     return ext_col_idx
     # Imports data based on prompt results    
 
