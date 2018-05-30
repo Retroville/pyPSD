@@ -1,3 +1,7 @@
+# pyPSD
+# Austin Rhodes
+
+
 # %% Initialization
 import unicodecsv as csv
 import numpy as np
@@ -36,21 +40,21 @@ class voldist(object):
         self.extstr = strs[ext_col_idx]
         extent = dat[:, ext_col_idx]  # formats primary data and volume columns
 
-        self.counts, self.realbins = np.histogram(extent, bins=bin_edges) # [1]
+        self.counts, self.realbins = np.histogram(extent, bins=bin_edges) 
         plt.show
 
-        self.numavg = sum(extent) / len(extent)  #                          [0]
+        self.numavg = sum(extent) / len(extent)  
 
         fidx = np.searchsorted(self.realbins, extent, 'right')
 
-        for i in range(1, len(self.realbins)):  #                           [2]
+        for i in range(1, len(self.realbins)): 
             logc = fidx == i
             self.volbinsums.append(sum(volume[logc]))
 
-      # volbinfracsums = volbinsums / sum(volume)  #                        [0]
-        volfrac = volume / sum(volume)  #                                   [0]
-        if typ == (0,0):
-            self.volavg = sum(extent * volfrac) / sum(volfrac)  #            [3] Weighted
+      # volbinfracsums = volbinsums / sum(volume)  
+        volfrac = volume / sum(volume)                                 
+        if typ == (0,0): # Represents D[x,y] average type
+            self.volavg = sum(extent * volfrac) / sum(volfrac)            
         else:
             self.volavg = sum(extent**typ[0])/sum(extent**typ[1])
         
@@ -73,8 +77,8 @@ class voldist(object):
         def subhistplots(num, xvals, yvals, xstr, ystr):
             plt.subplot(2, 1, num)
             plt.bar(xvals, yvals,
-                    width=--1, color='white', linewidth=1, edgecolor='red',
-                    hatch='////', align='edge', tick_label=np.around(self.realbins[1:],5))
+            width=-1, color='white', linewidth=1, edgecolor='red',
+            hatch='////', align='edge', tick_label=np.around(self.realbins[1:],5))
             plt.xlabel(ystr)
             plt.ylabel(xstr)
             plt.xticks(rotation=90)
@@ -111,9 +115,9 @@ class voldist(object):
                     self.current_file_name + '_distribution.png' + 
                     color("directory", 'green'))
         
-def scattergrid(ext_col_idx):
+def scattergrid(ext_col_idx, scp):
     gridsize = 1 + len(dat[0])//2
-    scatterplots = plt.figure(num=1, figsize=(11, 8.5))
+    scatterplots = plt.figure(num=1, figsize=(scp[0],scp[1]))
     plt.suptitle(strs[ext_col_idx])
     for i in range(1, len(dat[0])+1):
         # creates a grid of scatterplots, per each column pair
@@ -129,8 +133,8 @@ def scattergrid(ext_col_idx):
         plt.xlabel('\n'.join(wrap(strs[i-1],30)), fontsize=8)
         plt.xticks(fontsize=8)
         plt.yticks(fontsize=8)
-    scatterplots.set_figheight(8.5)
-    scatterplots.set_figwidth(11)
+    scatterplots.set_figheight(scp[1])
+    scatterplots.set_figwidth(scp[0])
     plt.gcf().tight_layout() # rect=[0, 0.03, 1, 0.95]
     plt.show(block=False)
     return
@@ -240,6 +244,8 @@ vol_col_idx = int(input(vol_col_strs)) - 1
 print(color('\n\nYou chose: ', 'green') + strs[vol_col_idx] + '\n')
 
 # %% Main Loop
+os.system('cls' if os.name == 'nt' else 'clear')
+
 
 idx = 0
 typ = (3,2) 
@@ -252,14 +258,16 @@ ext_col_ = promptdatcol()
 reportmode = report_prompt()
 if reportmode is True:
     matplotlib.use('Agg')
+    
+scatterparam = (8,8)
 
 while True:
     if type(ext_col_) is int:
         ext_col_idx = ext_col_
-        fig1 = scattergrid(ext_col_)
+        fig1 = scattergrid(ext_col_, scatterparam)
     else:
         ext_col_idx = ext_col_[idx]
-        fig1 = scattergrid(ext_col_[idx])
+        fig1 = scattergrid(ext_col_[idx], scatterparam)
     sig = True
     while sig == True:
         v = voldist(dat, strs, get_bins())
