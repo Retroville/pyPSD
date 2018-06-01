@@ -16,18 +16,17 @@ except OSError as e:
 
 vol_col = []
 ext_col = []
+dat = []
 dat_prompt_strs = []
 my_range = []
 #---- initilization of variables. do I even need to do this? who knows
 
 # %% Calculations
 class voldist(object):
-    def __init__(self, dat, strs, bin_edges, col_idces):
+    def __init__(self, dat, strs, bin_edges):
         self.dat = dat
         self.strs = strs
         self.volbinsums = []
-        self.ext_col_idx = col_idces[0]
-        self.vol_col_idx = col_idces[1]
 
 
         self.volstr = strs[vol_col_idx]
@@ -139,14 +138,7 @@ def clearplots():
     plt.clf()
     plt.figure(2)
     plt.clf()
-
-# %% PDF writing
-def reportout(dat, strs, col_idces):
-
-    print(color('weed','red'))
-    return
-
-
+    
 # %% Menu
 def cmd_save():
     return v.saveout()
@@ -183,14 +175,6 @@ def menu_cmd():
     return
 
 # %% Data Import & Prompt
-def report_prompt():
-    report_prompt_ans = input('Enter report mode? (Y/N)')
-    print(report_prompt_ans)
-    if any(c in report_prompt_ans for c in ('y', 'Y')):
-        return True
-    else:
-        return False
-
 def get_bins():
     my_range = input('Input the range of the x axis histogram bins: \n'
                      '(Leave blank to bin automatically)')
@@ -203,7 +187,7 @@ def get_bins():
     return bin_edges
 
 
-def get_datcol(strs):
+def promptdatcol():
     ext_col_strs = 'Select the data column(s):\n' + '\n'.join(dat_prompt_strs)
     ext_col_idx = input(ext_col_strs)
     if ',' not in ext_col_idx:
@@ -213,68 +197,55 @@ def get_datcol(strs):
         ext_col_idx = [int(i)-1 for i in ext_col_idx.split(',')]
         print(color('\n\nYou chose: ', 'green') + 'Multiple input columns' + '\n')
     return ext_col_idx
+    # Imports data based on prompt results    
 
-def get_volcol(strs):
-    vol_col_strs = 'Select the \'volume\' column: \n' + '\n'.join(dat_prompt_strs)
-    vol_col_idx = int(input(vol_col_strs)) - 1
-    print(color('\n\nYou chose: ', 'green') + strs[vol_col_idx] + '\n')   
-    return vol_col_idx
 
-def get_data():
-    dat = []
+# root = tk.Tk()
+# root.withdraw()
 
-    # root = tk.Tk()
-    # root.withdraw()
+# file_path = filedialog.askopenfilename()
+file_path = '../data/input.csv'  # DEBUGGING - remove this later
+with open(file_path, 'rb') as csvfile:
+    csvreader = csv.reader(csvfile, encoding='utf-8')
 
-    # file_path = filedialog.askopenfilename()
-    file_path = '../data/input.csv'  # DEBUGGING - remove this later
-    with open(file_path, 'rb') as csvfile:
-        csvreader = csv.reader(csvfile, encoding='utf-8')
+    for row in csvreader:
+        if 'Grand total' in row:
+            break
+        dat.append(row)
 
-        for row in csvreader:
-            if 'Grand total' in row:
-                break
-            dat.append(row)
+strs = dat[1]  # pulls column headers
+dat = np.array(dat[2:])  # pulls raw numbers
+strs = strs[1:]  # trims 'name' column
+dat = np.delete(dat, 0, 1)  # trims name data column
+dat = dat.astype(np.float)  # converts raw numbers to float(eg 2.31e7 to float)
 
-    strs = dat[1]  # pulls column headers
-    dat = np.array(dat[2:])  # pulls raw numbers
-    strs = strs[1:]  # trims 'name' column
-    dat = np.delete(dat, 0, 1)  # trims name data column
-    dat = dat.astype(np.float)  # converts raw numbers to float(eg 2.31e7 to float)
+for i in range(0, len(strs)):  # creates prompt string: choice component
+    dat_prompt_strs.append(str(i + 1) + ' - ' + strs[i])
 
-    for i in range(0, len(strs)):  # creates prompt string: choice component
-        dat_prompt_strs.append(str(i + 1) + ' - ' + strs[i])
-    return dat, strs
+vol_col_strs = 'Select the \'volume\' column: \n' + '\n'.join(dat_prompt_strs)
+vol_col_idx = int(input(vol_col_strs)) - 1
+print(color('\n\nYou chose: ', 'green') + strs[vol_col_idx] + '\n')
 
 # %% Main Loop
+
 idx = 0
 typ = (3,2) 
     # Specifiy method of determining volume average:
     # (Leave blank to calculate weighted average)
     # Fill in according to D[x,y] parameter
     # e.g.: De Brouckere mean dia. = (4,3),  Sauter mean dia. = (3,2)
-dat, strs = get_data()
-ext_col_ = get_datcol(strs)
-vol_col_idx = get_volcol(strs)
 
-if type(ext_col_) is int:
-    ext_col_idx = ext_col_
-else:
-    ext_col_idx = ext_col_[idx]
-
-if report_prompt() is not True:
-    while True:
-        fig1 = scattergrid(ext_col_idx)
-        sig = True
-        while sig == True:
-            v = voldist(dat, strs, get_bins(), [ext_col_idx, vol_col_idx])
-            fig2 = v.vdplot()
-            plt.show()
-            menu_cmd()
-else:
-    import matplotlib
-    matplotlib.use('Agg')
-    reportout(dat, strs, [ext_col_idx, vol_col_idx])
-
-# END, FIN, QED, ETC
-
+ext_col_ = promptdatcol()
+while True:
+    if type(ext_col_) is int:
+        ext_col_idx = ext_col_
+        fig1 = scattergrid(ext_col_)
+    else:
+        ext_col_idx = ext_col_[idx]
+        fig1 = scattergrid(ext_col_[idx])
+    sig = True
+    while sig == True:
+        v = voldist(dat, strs, get_bins())
+        fig2 = v.vdplot()
+        plt.show()
+        menu_cmd()
