@@ -1,10 +1,11 @@
 # %% Initialization
 import unicodecsv as csv
 import numpy as np
-import matplotlib.pyplot as plt
 from termcolor import colored as color
 import os
 import errno
+import matplotlib.pyplot as plt     
+import sys
 # import tkinter as tk
 # from tkinter import filedialog
 
@@ -16,43 +17,38 @@ except OSError as e:
 
 vol_col = []
 ext_col = []
-dat_prompt_strs = []
 my_range = []
 #---- initilization of variables. do I even need to do this? who knows
 
 # %% Calculations
 class voldist(object):
-    def __init__(self, dat, strs, bin_edges, col_idces):
-        self.dat = dat
-        self.strs = strs
+    def __init__(self, dat, strs, bin_edges, col_idces, *typ):
         self.volbinsums = []
-        self.ext_col_idx = col_idces[0]
-        self.vol_col_idx = col_idces[1]
+        self.ext_col_idx = col_idces[1]
+        self.vol_col_idx = col_idces[0]
 
+        self.volstr = strs[self.vol_col_idx]
+        self.volume = dat[:, self.vol_col_idx]
+        self.extstr = strs[self.ext_col_idx]
+        self.extent = dat[:, self.ext_col_idx]  # formats primary data and volume columns
 
-        self.volstr = strs[vol_col_idx]
-        volume = dat[:, vol_col_idx]
-        self.extstr = strs[ext_col_idx]
-        extent = dat[:, ext_col_idx]  # formats primary data and volume columns
-
-        self.counts, self.realbins = np.histogram(extent, bins=bin_edges) # [1]
+        self.counts, self.realbins = np.histogram(self.extent, bins=bin_edges) #  [1]
         plt.show
 
-        self.numavg = sum(extent) / len(extent)  #                          [0]
+        self.numavg = sum(self.extent) / len(self.extent)  #                           [0]
 
-        fidx = np.searchsorted(self.realbins, extent, 'right')
+        fidx = np.searchsorted(self.realbins, self.extent, 'right')
 
-        for i in range(1, len(self.realbins)):  #                           [2]
+        for i in range(1, len(self.realbins)):  #                            [2]
             logc = fidx == i
-            self.volbinsums.append(sum(volume[logc]))
+            self.volbinsums.append(sum(self.volume[logc]))
 
-      # volbinfracsums = volbinsums / sum(volume)  #                        [0]
-        volfrac = volume / sum(volume)  #                                   [0]
-        if typ == (0,0):
-            self.volavg = sum(extent * volfrac) / sum(volfrac)  #            [3] Weighted
+      # volbinfracsums = volbinsums / sum(volume)  #                         [0]
+        self.volfrac = self.volume / sum(self.volume)  #                                    [0]
+        if typ not in locals() or typ == (0,0):
+            self.volavg = sum(self.extent * self.volfrac) / sum(self.volfrac)  #                 [3] Weighted
         else:
-            self.volavg = sum(extent**typ[0])/sum(extent**typ[1])
-        
+            self.volavg = sum(self.extent**typ[0])/sum(extent**typ[1])
         
         self.navgstr = 'Number average: ' + str(float('%.8f'%(self.numavg)))
         self.vavgstr = 'Volume average: ' + str(float('%.8f'%(self.volavg)))
@@ -85,9 +81,6 @@ class voldist(object):
         subhistplots(1, self.binlabels, self.counts, 'Counts', self.extstr)
         subhistplots(2, self.binlabels, self.volbinsums, 'Volume', self.extstr)
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-                
-        print(color('Number average: ', 'green') + str(float('%.8f'%(self.numavg))))
-        print(color('Volume average: ', 'green') + str(float('%.8f'%(self.volavg))) + '\n')
         return
 
     def writeout(self):
@@ -98,7 +91,7 @@ class voldist(object):
         with open('../output/' + self.current_file_name + '_output.csv', 'wb') as csvout:
             outputwriter = csv.writer(csvout, delimiter=',')
             outputwriter.writerows(out)
-            print(color("\n\nPlot saved as output.csv", 'green') + '\n')
+            print(color("Plot saved as output.csv", 'green') + '\n')
         return
     
     def saveout(self):
@@ -106,13 +99,13 @@ class voldist(object):
         plt.savefig('../output/' + self.current_file_name + '_scatter')
         plt.figure(2)
         plt.savefig('../output/' + self.current_file_name + '_distribution')
-        print(color("\n\nPlots saved as ", 'green') + self.current_file_name + 
+        print(color("Plots saved as ", 'green') + self.current_file_name + 
                     '_scatter.png' + color(" and ", 'green') + 
                     self.current_file_name + '_distribution.png' + 
                     color(" in ", 'green') + "../output/ " + 
                     color("directory\n", 'green'))
         
-def scattergrid(ext_col_idx):
+def scattergrid(dat, strs, vol_col_idx, ext_col_idx):
     gridsize = 1 + len(dat[0])//2
     scatterplots = plt.figure(num=1, figsize=(8, 8))
     plt.suptitle(strs[ext_col_idx])
@@ -140,29 +133,22 @@ def clearplots():
     plt.figure(2)
     plt.clf()
 
-# %% PDF writing
-def reportout(dat, strs, col_idces):
-
-    print(color('weed','red'))
-    return
-
-
 # %% Menu
-def cmd_save():
+def cmd_save(v):
     return v.saveout()
-def cmd_csv():
+def cmd_csv(v):
     return v.writeout()
-def cmd_next():
+def cmd_next(v):
     clearplots()
     global idx
     global sig
     idx += 1
     sig = False
     return
-def cmd_quit():
-    return quit()
+def cmd_quit(v):
+    sys.exit()
 
-def menu_cmd():
+def menu_cmd(v):
     OPTIONS = {"bins":dict( desc = "Change bins of currently active distribution plot", func = None), # wew lad
                "save":dict( desc = "Save currently active plots as images", func = cmd_save),
                "csv":dict( desc = "Export currently active plots to csv file", func = cmd_csv),
@@ -175,53 +161,17 @@ def menu_cmd():
             print("\t" + key + "\t" + OPTIONS[key]["desc"])
         cmd = input('Selection: ')
         if not cmd in OPTIONS.keys():
-            print(color("\n\nInvalid selection", 'red') + '\n')
+            print(color("Invalid selection", 'red') + '\n')
         elif cmd == 'bins':
             return
         else:
-            OPTIONS[cmd]["func"]()
+            OPTIONS[cmd]["func"](v)
     return
 
 # %% Data Import & Prompt
-def report_prompt():
-    report_prompt_ans = input('Enter report mode? (Y/N)')
-    print(report_prompt_ans)
-    if any(c in report_prompt_ans for c in ('y', 'Y')):
-        return True
-    else:
-        return False
-
-def get_bins():
-    my_range = input('Input the range of the x axis histogram bins: \n'
-                     '(Leave blank to bin automatically)')
-    print(color('\n\nYou Chose: ', 'green') + my_range + '\n')
-    if my_range:
-        my_range = float(my_range)
-        bin_edges = np.arange(0, max(dat[:, ext_col_idx]), my_range)
-    else:
-        bin_edges = 20
-    return bin_edges
-
-
-def get_datcol(strs):
-    ext_col_strs = 'Select the data column(s):\n' + '\n'.join(dat_prompt_strs)
-    ext_col_idx = input(ext_col_strs)
-    if ',' not in ext_col_idx:
-        ext_col_idx = int(ext_col_idx)-1
-        print(color('\n\nYou chose: ', 'green') + strs[ext_col_idx] + '\n')
-    else:
-        ext_col_idx = [int(i)-1 for i in ext_col_idx.split(',')]
-        print(color('\n\nYou chose: ', 'green') + 'Multiple input columns' + '\n')
-    return ext_col_idx
-
-def get_volcol(strs):
-    vol_col_strs = 'Select the \'volume\' column: \n' + '\n'.join(dat_prompt_strs)
-    vol_col_idx = int(input(vol_col_strs)) - 1
-    print(color('\n\nYou chose: ', 'green') + strs[vol_col_idx] + '\n')   
-    return vol_col_idx
-
 def get_data():
     dat = []
+    dat_prompt_strs = []
 
     # root = tk.Tk()
     # root.withdraw()
@@ -244,37 +194,89 @@ def get_data():
 
     for i in range(0, len(strs)):  # creates prompt string: choice component
         dat_prompt_strs.append(str(i + 1) + ' - ' + strs[i])
-    return dat, strs
+    return dat, strs, dat_prompt_strs
+
+def get_bins():
+    my_range = input('Input the range of the x axis histogram bins: \n'
+                     '(Leave blank to bin automatically)')
+    print(color('You Chose: ', 'green') + my_range + '\n')
+    if my_range:
+        my_range = float(my_range)
+        bin_edges = np.arange(0, max(dat[:, ext_col_idx]), my_range)
+    else:
+        bin_edges = 20
+    return bin_edges
+
+
+def get_datcol(strs, pstrs):
+    ext_col_strs = 'Select the data column(s):\n' + '\n'.join(pstrs)
+    while True:
+        ext_col_idx = input(ext_col_strs)
+        try:    
+            if ',' in ext_col_idx:
+                ext_col_idx = [int(i)-1 for i in ext_col_idx.split(',')]
+                print(color('You chose: ', 'green') + 'Multiple input columns' + '\n')
+            elif ':' in ext_col_idx:
+                minmax = [int(i)-1 for i in ext_col_idx.split(':')]
+                ext_col_idx = range(minmax[0],minmax[1]+1)
+                print(color('You chose: ', 'green') + 'Range of input columns' + '\n')
+            else:
+                ext_col_idx = int(ext_col_idx)-1
+                print(color('You chose: ', 'green') + strs[ext_col_idx] + '\n')
+        except ValueError:
+            print(color("Input must be integer!\n",'red'))
+        else:
+            break
+    return ext_col_idx
+
+def get_volcol(strs, pstrs):
+    vol_col_strs = 'Select the \'volume\' column: \n' + '\n'.join(pstrs)
+    while True: 
+        vol_col_idx = input(vol_col_strs)
+        try:
+            vol_col_idx = int(vol_col_idx) - 1
+        except ValueError:
+            print(color("Input must be integer!\n",'red'))
+        else:
+            break
+    print(color('You chose: ', 'green') + strs[vol_col_idx] + '\n')   
+    return vol_col_idx
 
 # %% Main Loop
-idx = 0
-typ = (3,2) 
-    # Specifiy method of determining volume average:
-    # (Leave blank to calculate weighted average)
-    # Fill in according to D[x,y] parameter
-    # e.g.: De Brouckere mean dia. = (4,3),  Sauter mean dia. = (3,2)
-dat, strs = get_data()
-ext_col_ = get_datcol(strs)
-vol_col_idx = get_volcol(strs)
+def main():
+    global idx
+    global sig
+    global endx
+    idx = 0
+    typ = (3,2) 
+        # Specifiy method of determining volume average:
+        # (Leave blank to calculate weighted average)
+        # Fill in according to D[x,y] parameter
+        # e.g.: De Brouckere mean dia. = (4,3),  Sauter mean dia. = (3,2)
+    dat, strs, dat_prompt_strs = get_data()
+    vol_col_idx = get_volcol(strs, dat_prompt_strs)
+    ext_col_ = get_datcol(strs, dat_prompt_strs)
 
-if type(ext_col_) is int:
-    ext_col_idx = ext_col_
-else:
-    ext_col_idx = ext_col_[idx]
-
-if report_prompt() is not True:
     while True:
-        fig1 = scattergrid(ext_col_idx)
+        if type(ext_col_) is int:
+            ext_col_idx = ext_col_
+        else:
+            try:
+                ext_col_idx = ext_col_[idx]
+            except IndexError:
+                print(color("End of file reached\n" +
+                            "Returning to previous column...", 'blue'))
+        fig1 = scattergrid(dat, strs, vol_col_idx, ext_col_idx)
         sig = True
         while sig == True:
-            v = voldist(dat, strs, get_bins(), [ext_col_idx, vol_col_idx])
+            v = voldist(dat, strs, get_bins(), [vol_col_idx, ext_col_idx])
             fig2 = v.vdplot()
             plt.show()
-            menu_cmd()
-else:
-    import matplotlib
-    matplotlib.use('Agg')
-    reportout(dat, strs, [ext_col_idx, vol_col_idx])
+            menu_cmd(v)
+    return
+
+if __name__ == "__main__":
+    main()
 
 # END, FIN, QED, ETC
 

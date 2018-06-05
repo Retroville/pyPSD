@@ -138,7 +138,12 @@ def clearplots():
     plt.clf()
     plt.figure(2)
     plt.clf()
-    
+
+# %% PDF writing
+
+
+
+
 # %% Menu
 def cmd_save():
     return v.saveout()
@@ -227,7 +232,6 @@ vol_col_idx = int(input(vol_col_strs)) - 1
 print(color('\n\nYou chose: ', 'green') + strs[vol_col_idx] + '\n')
 
 # %% Main Loop
-
 idx = 0
 typ = (3,2) 
     # Specifiy method of determining volume average:
