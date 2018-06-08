@@ -15,11 +15,6 @@ except OSError as e:
     if e.errno != errno.EEXIST:
         raise
 
-vol_col = []
-ext_col = []
-my_range = []
-#---- initilization of variables. do I even need to do this? who knows
-
 # %% Calculations
 class voldist(object):
     def __init__(self, dat, strs, bin_edges, col_idces, *typ):
@@ -32,21 +27,21 @@ class voldist(object):
         self.extstr = strs[self.ext_col_idx]
         self.extent = dat[:, self.ext_col_idx]  # formats primary data and volume columns
 
-        self.counts, self.realbins = np.histogram(self.extent, bins=bin_edges) #  [1]
+        self.counts, self.realbins = np.histogram(self.extent, bins=bin_edges) 
         plt.show
 
-        self.numavg = sum(self.extent) / len(self.extent)  #                           [0]
+        self.numavg = sum(self.extent) / len(self.extent) 
 
         fidx = np.searchsorted(self.realbins, self.extent, 'right')
 
-        for i in range(1, len(self.realbins)):  #                            [2]
+        for i in range(1, len(self.realbins)): 
             logc = fidx == i
             self.volbinsums.append(sum(self.volume[logc]))
 
-      # volbinfracsums = volbinsums / sum(volume)  #                         [0]
-        self.volfrac = self.volume / sum(self.volume)  #                                    [0]
+      # volbinfracsums = volbinsums / sum(volume)
+        self.volfrac = self.volume / sum(self.volume)  
         if typ not in locals() or typ == (0,0):
-            self.volavg = sum(self.extent * self.volfrac) / sum(self.volfrac)  #                 [3] Weighted
+            self.volavg = sum(self.extent * self.volfrac) / sum(self.volfrac)  
         else:
             self.volavg = sum(self.extent**typ[0])/sum(extent**typ[1])
         
@@ -124,7 +119,7 @@ def scattergrid(dat, strs, vol_col_idx, ext_col_idx):
     scatterplots.set_figheight(8)
     scatterplots.set_figwidth(8)
     plt.gcf().tight_layout() # rect=[0, 0.03, 1, 0.95]
-    plt.show(block=False)
+    plt.subplots_adjust(top=0.95, left=0.1, right = 0.9)
     return
 
 def clearplots():
@@ -133,7 +128,7 @@ def clearplots():
     plt.figure(2)
     plt.clf()
 
-# %% Menu
+# %% Menu                        FIX LATER: i.e. become if: elif: chain :(
 def cmd_save(v):
     return v.saveout()
 def cmd_csv(v):
@@ -147,14 +142,16 @@ def cmd_next(v):
     return
 def cmd_quit(v):
     sys.exit()
+def cmd_help(v):
+    return
 
 def menu_cmd(v):
     OPTIONS = {"bins":dict( desc = "Change bins of currently active distribution plot", func = None), # wew lad
                "save":dict( desc = "Save currently active plots as images", func = cmd_save),
                "csv":dict( desc = "Export currently active plots to csv file", func = cmd_csv),
                "next":dict( desc = "Select next data column (retains volume column selection)", func = cmd_next),
-               "quit":dict( desc = "Exits the program", func = cmd_quit)}
-
+               "quit":dict( desc = "Exits the program", func = cmd_quit),
+               "help":dict( desc = "Displays helpful information", func = cmd_help)}
     while sig == True:
         print("\nPlease choose an option:")
         for key in OPTIONS.keys():
@@ -196,15 +193,21 @@ def get_data():
         dat_prompt_strs.append(str(i + 1) + ' - ' + strs[i])
     return dat, strs, dat_prompt_strs
 
-def get_bins():
-    my_range = input('Input the range of the x axis histogram bins: \n'
-                     '(Leave blank to bin automatically)')
-    print(color('You Chose: ', 'green') + my_range + '\n')
-    if my_range:
-        my_range = float(my_range)
-        bin_edges = np.arange(0, max(dat[:, ext_col_idx]), my_range)
-    else:
-        bin_edges = 20
+def get_bins(dat, ext_col_idx):
+    while True:
+        my_range = input('Input the range of the x axis histogram bins: \n'
+                 '(Leave blank to bin automatically)')
+        print(color('You Chose: ', 'green') + my_range + '\n')
+        try:
+            if my_range:
+                my_range = float(my_range)
+                bin_edges = np.arange(0, max(dat[:, ext_col_idx]), my_range)
+            else:
+                bin_edges = 20
+        except ValueError:
+            print(color("Input must be number or null (empty)!\n",'red'))
+        else:
+            break
     return bin_edges
 
 
@@ -248,7 +251,7 @@ def main():
     global sig
     global endx
     idx = 0
-    typ = (3,2) 
+    typ = (4,3) 
         # Specifiy method of determining volume average:
         # (Leave blank to calculate weighted average)
         # Fill in according to D[x,y] parameter
@@ -259,17 +262,24 @@ def main():
 
     while True:
         if type(ext_col_) is int:
+            if idx != 0:
+                print(color('End of file reached\n', 'blue') + 
+                      color('Closing Program . . .', 'red'))
+                break
             ext_col_idx = ext_col_
+
         else:
             try:
                 ext_col_idx = ext_col_[idx]
             except IndexError:
-                print(color("End of file reached\n" +
-                            "Returning to previous column...", 'blue'))
+                print(color('End of file reached\n', 'blue') + 
+                      color('Closing Program . . .', 'red'))
+                break
         fig1 = scattergrid(dat, strs, vol_col_idx, ext_col_idx)
+        plt.show(block=False)
         sig = True
         while sig == True:
-            v = voldist(dat, strs, get_bins(), [vol_col_idx, ext_col_idx])
+            v = voldist(dat, strs, get_bins(dat, ext_col_idx), [vol_col_idx, ext_col_idx])
             fig2 = v.vdplot()
             plt.show()
             menu_cmd(v)
