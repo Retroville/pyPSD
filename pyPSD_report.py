@@ -18,6 +18,11 @@ dat, strs, dat_prompt_strs = get_data()
 vol_col_idx = get_volcol(strs, dat_prompt_strs)
 ext_col_ = get_datcol(strs, dat_prompt_strs)
 
+if type(ext_col_) is int:
+	nreports = 1
+else:
+	nreports = len(ext_col_)
+
 #enter filename for output:
 filename = 'testoutputTRU'
 
@@ -40,13 +45,12 @@ print('setting current page to 1...')
 currentpage = 1
 with PdfPages('../output/' + filename + '.pdf') as pdf:
 	#for idx in range(0, nreports)
-	if True:
+	for idx in range(0, nreports):	#was lst working on this
+
 		if type(ext_col_) is int:
 			ext_col_idx = ext_col_
-			nreports = 1
 		else:
 			ext_col_idx = ext_col_[idx]
-			nreports = len(ext_col_)
 
 		typ = (0,0)
 		v = voldist(dat, strs, 25, [ext_col_idx, vol_col_idx], typ)
