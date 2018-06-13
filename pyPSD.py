@@ -7,11 +7,11 @@ import errno
 import matplotlib.pyplot as plt     
 import sys
 from pyfiglet import figlet_format
-# import tkinter as tk
-# from tkinter import filedialog
+import glob
 
 try:
 	os.makedirs('../output/')
+	os.makedirs('../input/')
 except OSError as e:
 	if e.errno != errno.EEXIST:
 		raise
@@ -46,6 +46,8 @@ class voldist(object):
 		else:
 			self.volavg = sum(self.extent**typ[0])/sum(extent**typ[1])
 		
+		self.porevol = sum(self.volume)
+
 		self.navgstr = 'Number average: ' + str(float('%.8f'%(self.numavg)))
 		self.vavgstr = 'Volume average: ' + str(float('%.8f'%(self.volavg)))
 
@@ -140,6 +142,8 @@ def cmd_next():
 	idx += 1
 	sig = False
 	return
+def cmd_report():
+	import pyPSD_report
 def cmd_quit():
 	sys.exit()
 def cmd_help():
@@ -165,6 +169,7 @@ def menu_cmd(v):
 			   "save":dict( desc = "Save currently active plots as images", func = cmd_save),
 			   "csv":dict( desc = "Export currently active plots to csv file", func = cmd_csv),
 			   "next":dict( desc = "Select next data column (retains volume column selection)", func = cmd_next),
+			   "report":dict( desc = "Runs pyPSD_report.py to generate a report of the data", func = cmd_report),
 			   "about":dict( desc = "Displays helpful information", func = cmd_help),
 			   "quit":dict( desc = "Exits the program", func = cmd_quit)}
 
@@ -185,14 +190,28 @@ def menu_cmd(v):
 
 # %% Data Import & Prompt
 def get_data():
+	fn_prompt_strs = []
 	dat = []
 	dat_prompt_strs = []
+	os.chdir('../input/')
+	files = glob.glob('*.csv')
+	for i in range(0, len(files)):  # creates prompt string: choice component
+		fn_prompt_strs.append(str(i + 1) + ' - ' + files[i])
+	fn_strs = '\nSelect the file to analyze:\n' + '\n'.join(fn_prompt_strs)
+	while True:
+		file_path_idx = input(fn_strs)
+		try:
+			file_path_idx = int(file_path_idx)-1
+			print(color('You chose: ', 'green') + files[file_path_idx] + '\n')
+		except ValueError:
+			print(color("Input must be integer!\n",'red'))
+		else:
+			break
 
-	# root = tk.Tk()
-	# root.withdraw()
+	file_path = '../input/' + files[file_path_idx]
+	file_name = files[file_path_idx]
+	file_name = file_name[:-4]
 
-	# file_path = filedialog.askopenfilename()
-	file_path = '../data/input.csv'  # DEBUGGING - remove this later
 	with open(file_path, 'rb') as csvfile:
 		csvreader = csv.reader(csvfile, encoding='utf-8')
 
@@ -209,7 +228,7 @@ def get_data():
 
 	for i in range(0, len(strs)):  # creates prompt string: choice component
 		dat_prompt_strs.append(str(i + 1) + ' - ' + strs[i])
-	return dat, strs, dat_prompt_strs
+	return dat, strs, dat_prompt_strs, file_name
 
 def get_bins(dat, ext_col_idx):
 	while True:
@@ -274,7 +293,7 @@ def main():
 		# (Leave blank to calculate weighted average)
 		# Fill in according to D[x,y] parameter
 		# e.g.: De Brouckere mean dia. = (4,3),  Sauter mean dia. = (3,2)
-	dat, strs, dat_prompt_strs = get_data()
+	dat, strs, dat_prompt_strs, file_path = get_data()
 	vol_col_idx = get_volcol(strs, dat_prompt_strs)
 	ext_col_ = get_datcol(strs, dat_prompt_strs)
 

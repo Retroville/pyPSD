@@ -1,6 +1,7 @@
 # pyPSD report mode
 # Austin Rhodes, 2018
 from pyPSD import *
+import os
 import numpy as np
 import matplotlib
 from matplotlib.backends.backend_pdf import PdfPages
@@ -9,12 +10,16 @@ from termcolor import colored as clr
 
 try:
 	os.makedirs('../output/')
+	os.makedirs('../input/')
 except OSError as e:
 	if e.errno != errno.EEXIST:
 		raise
 
 # %% Gather Data
-dat, strs, dat_prompt_strs = get_data()
+m_tvol = float(input('Enter total volume of sample: '))
+m_pwr = float(input('Enter another parameter: '))
+
+dat, strs, dat_prompt_strs, file_name = get_data()
 vol_col_idx = get_volcol(strs, dat_prompt_strs)
 ext_col_ = get_datcol(strs, dat_prompt_strs)
 
@@ -24,7 +29,7 @@ else:
 	nreports = len(ext_col_)
 
 #enter filename for output:
-filename = 'testoutputTRU'
+filename = file_name + '_Report'
 
 numofpages = len(dat[0])//8
 if not len(dat[0])%8 == 0:
@@ -54,7 +59,7 @@ with PdfPages('../output/' + filename + '.pdf') as pdf:
 
 		typ = (0,0)
 		v = voldist(dat, strs, 25, [ext_col_idx, vol_col_idx], typ)
-
+		m_pvol = v.porevol
 		for i in range(0, len(dat[0])):
 			# creates a grid of scatterplots, per each column pair
 			plt.figure(currentpage)
@@ -106,14 +111,13 @@ with PdfPages('../output/' + filename + '.pdf') as pdf:
 		v = voldist(dat, strs, 25, [vol_col_idx, ext_col_idx])
 		print('done')
 		print('formatting histogram page' + '...', end="")
-		plt.figure(num=2, figsize=(8, 11))
-		plt.ion()
+		plt.figure(num=2, figsize=(8.5, 11))
 		plt.clf()
 		print('done')
 		print('generating subplots:')
 		def subhistplots(num, xvals, yvals, xstr, ystr):
 			print('\tcreating subplot ' + str(num) + '...', end="")
-			plt.subplot(2, 1, num)
+			plt.subplot(3, 1, num)
 			plt.bar(xvals, yvals, width=--1, color='white', linewidth=1, 
 				edgecolor='red', hatch='////', align='edge', 
 				tick_label=np.around(v.realbins[1:],5))
@@ -131,6 +135,19 @@ with PdfPages('../output/' + filename + '.pdf') as pdf:
 		plt.annotate(v.vavgstr, xy=(0.55, 0.8), xytext=(0.55, 0.8),
 						 textcoords='axes fraction') 
 
+
+
+		plt.subplot(3, 1, 3)
+		plt.annotate('This is where metadata for an individual column might go'
+			, xy=(0.25,0.5), xytext=(0.2,0.5))
+		plt.annotate('Total Volume: ' + str(m_tvol)
+			, xy=(0.25,0.4), xytext=(0.2,0.4))
+		plt.annotate('Pore Volume: ' + str(m_pvol)
+			, xy=(0.25,0.3), xytext=(0.2,0.3))
+		plt.annotate('Percentage of pores per total volume: ' + str(m_pvol/m_tvol)
+			, xy=(0.25,0.2), xytext=(0.2,0.2))
+
+
 		print('saving page' + '...', end="")
 		pdf.savefig()
 		print('done')
@@ -138,9 +155,27 @@ with PdfPages('../output/' + filename + '.pdf') as pdf:
 		plt.close()
 		print('done')
 
-		#if r = 
-		#Metadata outputs go here
-		
+	#Metadata outputs
+	print('formatting meta page' + '...', end="")
+	plt.figure(num=3, figsize=(8.5,11))
+	plt.clf()
+	print('done')
+	print('printing metadata:')
+	print('\t' + str(m_pwr))
+	print('\t' + str(2*m_pwr))
+	plt.annotate('This is where metadata for an entire dataset might go'
+		, xy=(0.25,0.5), xytext=(0.25,0.5))
+	plt.annotate('Other parameter: ' + str(m_pwr)
+		, xy=(0.25,0.45), xytext=(0.25,0.45))
+	plt.annotate('Calculation from other parameter (*2): ' + str(2*m_pwr)
+		, xy=(0.25,0.4), xytext=(0.25,0.4))
+
+	print('saving page' + '...', end="")
+	pdf.savefig()
+	print('done')
+	print('closing active page' + '...', end="")
+	plt.close()
+	print('done')
 
 
 
@@ -166,9 +201,3 @@ with PdfPages('../output/' + filename + '.pdf') as pdf:
 
 
 
-
-
-
-
-
-	# 420
