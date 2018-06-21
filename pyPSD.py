@@ -1,5 +1,6 @@
 # %% Initialization
-import unicodecsv as csv
+#import unicodecsv as csv
+import csv
 import numpy as np
 from termcolor import colored as color
 import os
@@ -8,6 +9,7 @@ import matplotlib.pyplot as plt
 import sys
 from pyfiglet import figlet_format
 import glob
+from argparse import ArgumentParser, ArgumentTypeError
 
 try:
 	os.makedirs('../output/')
@@ -15,6 +17,15 @@ try:
 except OSError as e:
 	if e.errno != errno.EEXIST:
 		raise
+
+def parseNumList(string):
+	if ':' in string:
+		m = [int(i)-1 for i in string.split(':')]
+		return list(range(m[0],m[1]+1))
+	elif ',' in string:
+		return [int(i)-1 for i in string.split(',')]
+	else:
+		return int(string)-1    
 
 # %% Calculations
 class voldist(object):
@@ -29,7 +40,6 @@ class voldist(object):
 		self.extent = dat[:, self.ext_col_idx]  # formats primary data and volume columns
 
 		self.counts, self.realbins = np.histogram(self.extent, bins=bin_edges) 
-		plt.show
 
 		self.numavg = sum(self.extent) / len(self.extent) 
 
@@ -39,21 +49,47 @@ class voldist(object):
 			logc = fidx == i
 			self.volbinsums.append(sum(self.volume[logc]))
 
-	  # volbinfracsums = volbinsums / sum(volume)
+	#	volbinfracsums = volbinsums / sum(volume)
 		self.volfrac = self.volume / sum(self.volume)  
 		if typ not in locals() or typ == (0,0):
 			self.volavg = sum(self.extent * self.volfrac) / sum(self.volfrac)  
 		else:
 			self.volavg = sum(self.extent**typ[0])/sum(extent**typ[1])
 		
+		self.avg = [self.numavg, self.volavg]
+
 		self.porevol = sum(self.volume)
 
-		self.navgstr = 'Number average: ' + str(float('%.8f'%(self.numavg)))
-		self.vavgstr = 'Volume average: ' + str(float('%.8f'%(self.volavg)))
+		self.numstd = np.std(self.extent)
+		self.nummin = min(self.extent)
+		self.nummax = max(self.extent)
+
+		self.volstd = np.std(self.volume)
+		self.volmin = min(self.volume)
+		self.volmax = max(self.volume)
+
+		self.numavgstr = 'Number average: ' + str(float('%.8f'%(self.numavg)))
+		self.volavgstr = 'Volume average: ' + str(float('%.8f'%(self.volavg)))
+
+		self.numstdstr = 'Standard Deviation (number): ' + str(float('%.8f'%(self.numstd)))
+		self.numminstr = 'Minimum (number): ' + str(float('%.8f'%(self.nummin)))
+		self.nummaxstr = 'maximum (number): ' + str(float('%.8f'%(self.nummax)))
+
+		self.volstdstr = 'Standard Deviation (volume): ' + str(float('%.8f'%(self.volstd)))
+		self.volminstr = 'Minimum (volume): ' + str(float('%.8f'%(self.volmin)))
+		self.volmaxstr = 'maximum (volume): ' + str(float('%.8f'%(self.volmax)))
+
+		self.porevolstr = 'Total Pore Volume: ' + str(float('%.8f'%(self.porevol))) #out of this section later pls
 
 		self.binlabels = range(0, len(self.volbinsums))
 		
 		self.current_file_name = "".join([x if x.isalnum() else "_" for x in self.extstr])
+
+	#	vlinenum = (self.numavg/max(self.realbins)) * (len(self.realbins)-1)
+	#	vlinevol = (self.volavg/max(self.realbins)) * (len(self.realbins)-1)
+
+	#	self.vline = [vlinenum, vlinevol] # actual location is idx-1
+
 		return
 
 # %% Plotting and output
@@ -68,15 +104,29 @@ class voldist(object):
 					hatch='////', align='edge', tick_label=np.around(self.realbins[1:],5))
 			plt.xlabel(ystr)
 			plt.ylabel(xstr)
+		#	plt.axvline(self.vline[num-1]-1, color='k', linestyle='dashed', linewidth=1)
+		#	plt.axvline(self.vline[num-1]-1 , color='k', linestyle='dashed', linewidth=1)
 			plt.xticks(rotation=90)
 			return
 		subhistplots(1, self.binlabels, self.counts, 'Counts', self.extstr)
 		subhistplots(2, self.binlabels, self.volbinsums, 'Volume', self.extstr)
 		plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-		plt.annotate(self.navgstr, xy=(0.55, 0.9), xytext=(0.55, 0.9), 
-						 textcoords='axes fraction')
-		plt.annotate(self.vavgstr, xy=(0.55, 0.8), xytext=(0.55, 0.8),
-						 textcoords='axes fraction') 
+
+		print(self.numavgstr)
+		print(self.volavgstr)
+
+		'''
+		print(max(self.realbins))
+		print(len(self.realbins)-1)
+		print(self.numavg/max(self.realbins))
+		print(self.volavg/max(self.realbins))
+		print(self.vline)
+		'''
+
+		plt.annotate(self.numavgstr, xy=(0.55, 0.9), xytext=(0.55, 0.9), 
+							textcoords='axes fraction')
+		plt.annotate(self.volavgstr, xy=(0.55, 0.8), xytext=(0.55, 0.8),
+							textcoords='axes fraction')
 		return
 
 	def writeout(self):
@@ -100,7 +150,13 @@ class voldist(object):
 					self.current_file_name + '_distribution.png' + 
 					color(" in ", 'green') + "../output/ " + 
 					color("directory\n", 'green'))
-		
+
+def data_out(dat):
+	with open('../output/' + 'MODIFIED_DATA.csv', 'wb') as csvout:
+		outputwriter = csv.writer(csvout, delimiter=',')
+		outputwriter.writerows(dat)
+		print(color("filtered data saved", 'green') + '\n')
+
 def scattergrid(dat, strs, vol_col_idx, ext_col_idx):
 	gridsize = 1 + len(dat[0])//2
 	scatterplots = plt.figure(num=1, figsize=(8, 8))
@@ -111,7 +167,7 @@ def scattergrid(dat, strs, vol_col_idx, ext_col_idx):
 		if not i-1 == ext_col_idx:
 			plt.scatter(dat[:, i-1], dat[:, ext_col_idx], marker='.', c='black', s=1)
 			plt.xlim(0, max(dat[:, i-1]))
-		  # plt.ylim(0, max(dat[:, ext_col_idx-1]))
+		#	plt.ylim(0, max(dat[:, ext_col_idx-1]))
 		else:
 			plt.plot([0, 0, 1, 1, 0, 1, 1, 0],[0, 1, 0, 1, 0, 0, 1, 1],'r')
 			plt.xticks([])
@@ -165,7 +221,7 @@ def cmd_help():
 		return
 
 def menu_cmd(v):
-	OPTIONS = {"bins":dict( desc = "Change bins of currently active distribution plot", func = None), # wew lad
+	OPTIONS = {"bins":dict( desc = "Change bins of currently active distribution plot", func = None),
 			   "save":dict( desc = "Save currently active plots as images", func = cmd_save),
 			   "csv":dict( desc = "Export currently active plots to csv file", func = cmd_csv),
 			   "next":dict( desc = "Select next data column (retains volume column selection)", func = cmd_next),
@@ -189,35 +245,58 @@ def menu_cmd(v):
 	return
 
 # %% Data Import & Prompt
-def get_data():
+def filter_data(dat, filter_col, threshold):
+	m = [row for row in dat if row[filter_col] >= threshold]
+	return m
+
+def get_file(nolists=False):
 	fn_prompt_strs = []
-	dat = []
-	dat_prompt_strs = []
 	os.chdir('../input/')
 	files = glob.glob('*.csv')
+	files.sort()
 	for i in range(0, len(files)):  # creates prompt string: choice component
 		fn_prompt_strs.append(str(i + 1) + ' - ' + files[i])
-	fn_strs = '\nSelect the file to analyze:\n' + '\n'.join(fn_prompt_strs)
+	fn_strs = 'Select the file to analyze:\n' + '\n'.join(fn_prompt_strs)
 	while True:
-		file_path_idx = input(fn_strs)
 		try:
-			file_path_idx = int(file_path_idx)-1
-			print(color('You chose: ', 'green') + files[file_path_idx] + '\n')
+			file_path_idx = parseNumList(input(fn_strs))
+			if (nolists == True) and (type(file_path_idx) is list):
+				print(color('(Lists not permitted when running in this mode)', 'red'))
+				raise ValueError()
 		except ValueError:
 			print(color("Input must be integer!\n",'red'))
 		else:
-			break
+			if file_path_idx is int:
+				print(color('You chose: ', 'green') + str(file_path_idx) + '\n')
+				break
+			else:
+				print(color('You chose: ', 'green') + 'multiple files' + '\n')
+				break
+	if type(file_path_idx) is not int:
+		file_path = []
+		file_name = []
+		for i in file_path_idx:
+			file_path.append('../input/' + files[i])
+			mfile_name = files[i]
+			mfile_name = mfile_name[:-4]
+			file_name.append(mfile_name)
+	else:
+		file_path = '../input/' + files[file_path_idx]
+		file_name_ = files[i]
+		file_name = file_name_[:-4]
+	return file_path, file_name
 
-	file_path = '../input/' + files[file_path_idx]
-	file_name = files[file_path_idx]
-	file_name = file_name[:-4]
+def get_data(file_path):
+	dat = []
+	dat_prompt_strs = []
 
-	with open(file_path, 'rb') as csvfile:
-		csvreader = csv.reader(csvfile, encoding='utf-8')
+	with open(file_path, 'rU') as csvfile:
+		csvreader = csv.reader(csvfile)
 
 		for row in csvreader:
 			if 'Grand total' in row:
 				break
+			row = [ x for x in row if "" != x ]
 			dat.append(row)
 
 	strs = dat[1]  # pulls column headers
@@ -228,7 +307,7 @@ def get_data():
 
 	for i in range(0, len(strs)):  # creates prompt string: choice component
 		dat_prompt_strs.append(str(i + 1) + ' - ' + strs[i])
-	return dat, strs, dat_prompt_strs, file_name
+	return dat, strs, dat_prompt_strs
 
 def get_bins(dat, ext_col_idx):
 	while True:
@@ -251,34 +330,32 @@ def get_bins(dat, ext_col_idx):
 def get_datcol(strs, pstrs):
 	ext_col_strs = 'Select the data column(s):\n' + '\n'.join(pstrs)
 	while True:
-		ext_col_idx = input(ext_col_strs)
 		try:    
-			if ',' in ext_col_idx:
-				ext_col_idx = [int(i)-1 for i in ext_col_idx.split(',')]
-				print(color('You chose: ', 'green') + 'Multiple input columns' + '\n')
-			elif ':' in ext_col_idx:
-				minmax = [int(i)-1 for i in ext_col_idx.split(':')]
-				ext_col_idx = range(minmax[0],minmax[1]+1)
-				print(color('You chose: ', 'green') + 'Range of input columns' + '\n')
-			else:
-				ext_col_idx = int(ext_col_idx)-1
-				print(color('You chose: ', 'green') + strs[ext_col_idx] + '\n')
+			ext_col_idx = parseNumList(input(ext_col_strs))
 		except ValueError:
 			print(color("Input must be integer!\n",'red'))
 		else:
+			print(color('You chose: ', 'green') + str(ext_col_idx) + '\n')
 			break
 	return ext_col_idx
 
 def get_volcol(strs, pstrs):
-	vol_col_strs = 'Select the \'volume\' column: \n' + '\n'.join(pstrs)
-	while True: 
-		vol_col_idx = input(vol_col_strs)
-		try:
-			vol_col_idx = int(vol_col_idx) - 1
-		except ValueError:
-			print(color("Input must be integer!\n",'red'))
-		else:
-			break
+	vstrs = [ x for x in pstrs if "Voxel" in x ]
+	vol_col_strs = 'Select the \'volume\' column: \n' + '\n'.join(vstrs)
+	if len(vstrs) > 1:
+		while True: 
+			vol_col_idx = input(vol_col_strs)
+			try:
+				vol_col_idx = int(vol_col_idx) - 1
+			except ValueError:
+				print(color("Input must be integer!\n",'red'))
+			else:
+				break
+	elif len(vstrs) == 1:
+		vol_col_idx = vstrs[0]
+	else:
+		print(color('No volume columns identified: Exiting', 'red'))
+		sys.exit()
 	print(color('You chose: ', 'green') + strs[vol_col_idx] + '\n')   
 	return vol_col_idx
 
@@ -293,9 +370,19 @@ def main():
 		# (Leave blank to calculate weighted average)
 		# Fill in according to D[x,y] parameter
 		# e.g.: De Brouckere mean dia. = (4,3),  Sauter mean dia. = (3,2)
-	dat, strs, dat_prompt_strs, file_path = get_data()
+	dat, strs, dat_prompt_strs = get_data(get_file(nolists=True)[0])
 	vol_col_idx = get_volcol(strs, dat_prompt_strs)
 	ext_col_ = get_datcol(strs, dat_prompt_strs)
+
+#	experimental filtering code begins
+
+	print(color(dat,'red'))
+	print(color('\t\t\t>>[Filtering]>>','yellow',attrs=['blink','bold']))
+	dat = np.array(filter_data(dat, 2, 0.005))
+	print(color(dat,'blue'))
+#	data_out(dat)
+
+#	experimental filtering code ends
 
 	while True:
 		if type(ext_col_) is int:
@@ -323,7 +410,17 @@ def main():
 			menu_cmd(v)
 	return
 
+#-----------------^[ Definitions ]^----------------v[ Script ]v-----------------
 if __name__ == "__main__":
+	'''
+	parser = ArgumentParser()
+	parser.add_argument('-l', "--list", action='store_true')
+	args = parser.parse_args()
+	if args.list is True:
+		dat_prompt_strs = '\n'.join(get_data(get_file(nolists=True)[0])[2])
+		print(dat_prompt_strs + '\n')
+	else:
+	'''
 	main()
 
 # END, FIN, QED, ETC
