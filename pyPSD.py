@@ -92,6 +92,9 @@ class voldist(object):
 
 		return
 
+def sphericity():
+	pass
+
 # %% Plotting and output
 	def vdplot(self):
 		plt.figure(num=2, figsize=(8, 8))
@@ -286,6 +289,7 @@ def get_file(nolists=False):
 		file_name = file_name_[:-4]
 	return file_path, file_name
 
+
 def get_data(file_path):
 	dat = []
 	dat_prompt_strs = []
@@ -307,6 +311,7 @@ def get_data(file_path):
 
 	for i in range(0, len(strs)):  # creates prompt string: choice component
 		dat_prompt_strs.append(str(i + 1) + ' - ' + strs[i])
+
 	return dat, strs, dat_prompt_strs
 
 def get_bins(dat, ext_col_idx):
@@ -372,6 +377,11 @@ def main():
 		# e.g.: De Brouckere mean dia. = (4,3),  Sauter mean dia. = (3,2)
 	dat, strs, dat_prompt_strs = get_data(get_file(nolists=True)[0])
 	vol_col_idx = get_volcol(strs, dat_prompt_strs)
+	sur_col_idx = [i for i,x in enumerate(strs) if 'Surface area' in x]
+	if len(sur_col_idx) > 0:
+		print(color('Surface Area column detected! Sphericity has been added' 
+				  + 'as a a data option...','green',attrs=['bold']))
+
 	ext_col_ = get_datcol(strs, dat_prompt_strs)
 
 #	experimental filtering code begins

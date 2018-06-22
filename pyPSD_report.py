@@ -51,21 +51,15 @@ def get_file_list(frange):
 	return file_path, file_name
 
 parser = ArgumentParser()
-parser.add_argument('-d', "--data", nargs='?', type=parseNumList, const=False)
+parser.add_argument('-f', "--files", nargs='?', type=parseNumList, const=False)
 parser.add_argument('-c', "--columns", type=parseNumList)
 parser.add_argument('-v', "--volume", type=parseNumList)
-parser.add_argument('-f', "--filter", type=int)
-parser.add_argument('-t', "--threshold", type=float)
+parser.add_argument('-t', "--threshold", nargs=2, type=float)
 args = parser.parse_args()
-print(args.data)
+print(args.files)
 
-if (args.filter is not None) and (args.threshold is None):
-	print(color('Error: Filter column provided but no filter threshold.\n' +
-		'Proper syntax example: pypsd_report.py -f 3 -t 0.003', 'red'))
-	sys.exit()
-
-if args.data is not None:
-	file_path, file_name = get_file_list(args.data)
+if args.files is not None:
+	file_path, file_name = get_file_list(args.files)
 else:
 	print(color('\n(Careful, these might not be in the order ' + 
 					'you expect)','red'))
@@ -96,12 +90,12 @@ for jdx, fp in enumerate(file_path):
 		ext_col_ = get_datcol(strs, dat_prompt_strs)
 		eflag = True
 
-	if args.filter is not None:
+	if args.threshold is not None:
 		prefilt = len(dat)
 
 		print(color(dat,'red'))
 		print(color('\t\t\t>>[Filtering]>>','yellow',attrs=['blink','bold']))
-		dat = np.array(filter_data(dat, args.filter-1, args.threshold))
+		dat = np.array(filter_data(dat, int(args.threshold[0])-1, args.threshold[1]))
 		print(color(dat,'blue'))
 
 		postfilt = len(dat)
@@ -152,8 +146,8 @@ for jdx, fp in enumerate(file_path):
 			else:
 				ext_col_idx = ext_col_[idx]
 
-				supertitle = (file_name[jdx] + '         ' + strs[ext_col_idx] + 
-					'          Filtered: ' + str(FILTERED))
+			supertitle = (file_name[jdx] + '         ' + strs[ext_col_idx] + 
+				'          Filtered: ' + str(FILTERED))
 
 			typ = (0,0)
 			v = voldist(dat, strs, 25, [ext_col_idx, vol_col_idx], typ)
@@ -234,9 +228,6 @@ for jdx, fp in enumerate(file_path):
 			plt.gcf().text(0.5,0.18,v.volavgstr)
 			plt.gcf().text(0.5,0.15,v.volstdstr)
 			plt.gcf().text(0.5,0.12,v.volmaxstr)
-
-
-
 
 			'''
 			plt.subplot(3, 1, 3)
