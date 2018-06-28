@@ -50,13 +50,37 @@ def get_file_list(frange):
 		file_name.append(mfile_name)
 	return file_path, file_name
 
+def get_meta_cols():
+	meta_prompt_strs = []
+	meta_col_base = ('Number Average',			#[0] v.numavg
+				 'Volume Average',				#[1] v.volavg
+				 'Porosity',					#[2] porevol/tvol
+				 'Beam Power', 					#[3] --
+				 'Volumetric Energy Density')	#[4] E/V (v is melt pool volume or beam dia (??))
+	for i in range(0, len(meta_col_base)):
+		meta_prompt_strs.append(str(i + 1) + ' - ' + meta_col_base[i])
+	meta_prompt = '\nSelect the meta column(s) to be output:\n' + '\n'.join(meta_prompt_strs)
+	while True:
+		try:    
+			meta_col_idx = parseNumList(input(meta_prompt))
+		except ValueError:
+			print(color("Input must be integer!\n",'red'))
+		else:
+			break
+
+	meta_col_strs = ['Filename'] + [meta_col_base[i] for i in meta_col_idx]
+	return meta_col_strs, meta_col_idx
+
+
 parser = ArgumentParser()
 parser.add_argument('-f', "--files", nargs='?', type=parseNumList, const=False)
-parser.add_argument('-c', "--columns", type=parseNumList)
-parser.add_argument('-v', "--volume", type=parseNumList)
-parser.add_argument('-t', "--threshold", nargs=2, type=float)
+parser.add_argument('-c', "--columns", nargs='?', type=parseNumList, const=False)
+parser.add_argument('-v', "--volume", nargs='?', type=parseNumList, const=False)
+parser.add_argument('-t', "--threshold", nargs=2, type=float) # filter_col filter_threshold
+parser.add_argument('-l', "--list", nargs='?', const=True)
+parser.add_argument('-s', "--nosphericity", nargs='?', const=True)
+parser.add_argument('-m', "--nometa", nargs='?', const=True)
 args = parser.parse_args()
-print(args.files)
 
 if args.files is not None:
 	file_path, file_name = get_file_list(args.files)
@@ -71,21 +95,72 @@ if type(file_path) is not list:
 vflag = False
 eflag = False
 
+if args.nometa is not True:
+	meta_output = []
+	meta_col_strs, meta_col_idx = get_meta_cols()
+	meta_output.append(meta_col_strs)
+
+	# Objectify this VVV
+	beam_power=[]
+	total_sample_volume=[]
+	beam_diameter=[]
+	for jdx, fp in enumerate(file_path):
+		print('\nEnter the following parameters for ' + file_name[jdx] + ': ')
+		if 3 in meta_col_idx or 4 in meta_col_idx:
+			beam_power.append(float(input('Beam Power: ')))
+		if 2 in meta_col_idx:
+			total_sample_volume.append(float(input('Total Sample Volume: ')))
+		if 4 in meta_col_idx:
+			beam_diameter.append(float(input('Beam Diameter: ')))
+
+
 for jdx, fp in enumerate(file_path):
 
 	dat, strs, dat_prompt_strs = get_data(file_path[jdx])
 
+	if args.list is not None: # Breaks if '-l' arg is parsed
+		print('\n')
+		get_file(noparse=True)
+		print('\n')
+		list_cols(strs, dat_prompt_strs)
+		print('\n')
+		sys.exit()
+
 	if args.volume is not None:
-		vol_col_idx = args.volume
-		if type(vol_col_idx) is list:
-			vol_col_idx = vol_col_idx[0]
+		if type(args.volume) is list:
 			print(color('Volume column must be single integer, not list', 'red'))
+			args.volume = False
+		if args.volume is False:
+			vol_col_idx = [i for i,j in enumerate(strs) if "Voxel:Volume" in j][0]
 	elif vflag == False:
 		vol_col_idx = get_volcol(strs, dat_prompt_strs)
 		vflag = True
 
+	sur_col_idx = [i for i,x in enumerate(strs) if 'Voxel:Surface area' in x]
+	# Detect Surface Area column and calculate sphericity
+
+	if (len(sur_col_idx) > 0) and (args.nosphericity is None):
+		print(color('Surface Area column detected! ',
+			'green',attrs=['bold']), end="", flush=True)
+
+		sphericity_col = sphericity(dat[:, sur_col_idx], dat[:, vol_col_idx])
+		dat = np.concatenate((dat,sphericity_col[:,None]), axis=1)
+		# Add sphericity data to 'dat' variable
+		
+		strs.append('Sphericity')
+		dat_prompt_strs.append(str(len(strs)) + ' - ' + strs[len(strs)-1])
+
+		print(color('Sphericity has been added as a a data option.',
+			'green',attrs=['bold']))
+	elif (len(sur_col_idx) > 0) and (args.nosphericity is not None):
+		print(color('Surface Area column detected, but suppressed. Ignoring. . .',
+			'red',attrs=['bold']))
+
 	if args.columns is not None:
-		ext_col_ = args.columns
+		if args.columns is False:
+			ext_col_ = [i for i,j in enumerate(strs) if "Voxel:" not in j]
+		else:
+			ext_col_ = args.columns
 	elif eflag == False:
 		ext_col_ = get_datcol(strs, dat_prompt_strs)
 		eflag = True
@@ -146,8 +221,11 @@ for jdx, fp in enumerate(file_path):
 			else:
 				ext_col_idx = ext_col_[idx]
 
-			supertitle = (file_name[jdx] + '         ' + strs[ext_col_idx] + 
-				'          Filtered: ' + str(FILTERED))
+			if FILTERED:
+				filterstr = ', Filtered\n'
+			else:
+				filterstr = '\n'
+			supertitle = (file_name[jdx] + filterstr + strs[ext_col_idx] + '\n')
 
 			typ = (0,0)
 			v = voldist(dat, strs, 25, [ext_col_idx, vol_col_idx], typ)
@@ -161,15 +239,15 @@ for jdx, fp in enumerate(file_path):
 				print('plotting ' + strs[i] + ' [pos' + str((i%8)+1) + ' pg' + str((i//8)+1) + ']...', end="", flush=True)
 
 				if not i == ext_col_idx:
-					plt.scatter(dat[:, i], dat[:, ext_col_idx], marker='.', c='black', s=2)
+					plt.scatter(dat[:, i], dat[:, ext_col_idx], marker='|', c='black', s=1, rasterized=True)
 					plt.xlim(0, max(dat[:, i]))
-				  # plt.ylim(0, max(dat[:, ext_col_idx-1]))
+				#   plt.ylim(0, max(dat[:, ext_col_idx-1]))
 				else:
 					plt.plot([0, 0, 1, 1, 0, 1, 1, 0],[0, 1, 0, 1, 0, 0, 1, 1],'r')
 					plt.xticks([])
 					plt.yticks([])
 				plt.xlabel(strs[i])
-				plt.ylabel(strs[ext_col_idx])
+			#	plt.ylabel(strs[ext_col_idx])
 
 				print('done')
 
@@ -177,9 +255,9 @@ for jdx, fp in enumerate(file_path):
 					print('formatting plot' + '...', end="", flush=True)
 					plt.figure(currentpage).set_figheight(11)
 					plt.figure(currentpage).set_figwidth(8.5)
-					plt.suptitle(supertitle)
+					plt.suptitle(supertitle, fontsize=12)
 					plt.gcf().tight_layout() # rect=[0, 0.03, 1, 0.95]
-					plt.subplots_adjust(top=0.95, left=0.1, right = 0.9, wspace=0.35)
+					plt.subplots_adjust(top=0.9, left=0.1, right = 0.9, wspace=0.35)
 					print('done')
 
 					savepage()
@@ -209,7 +287,7 @@ for jdx, fp in enumerate(file_path):
 				plt.subplots_adjust(bottom=0.5)
 				plt.bar(xvals, yvals, width=-1, color='white', linewidth=1, 
 					edgecolor='red', hatch='////', align='edge', 
-					tick_label=np.around(v.realbins[1:],5))
+					tick_label=np.around(v.realbins[1:],5), rasterized=False)
 				plt.xlabel(ystr)
 				plt.ylabel(xstr)
 				plt.xticks(rotation=90)
@@ -217,9 +295,9 @@ for jdx, fp in enumerate(file_path):
 				return
 			subhistplots(1, v.binlabels, v.counts, 'Counts', v.extstr)
 			subhistplots(2, v.binlabels, v.volbinsums, 'Volume', v.extstr)
-			plt.suptitle(supertitle)
+			plt.suptitle(supertitle, fontsize=12)
 		#	plt.gcf().tight_layout(rect=[0.05, 0.2, 0.95, 0.95])
-			plt.subplots_adjust(bottom=0.3, top=0.95, hspace=0.3)
+			plt.subplots_adjust(bottom=0.3, top=0.9, hspace=0.3)
 
 			plt.gcf().text(0.1,0.18,v.numavgstr)
 			plt.gcf().text(0.1,0.15,v.numstdstr)
@@ -254,6 +332,35 @@ for jdx, fp in enumerate(file_path):
 
 		savepage()
 	print(color('Report complete at ../output/' + filename + '.pdf', 'green'))
+
+	# CSV meta outputs
+	if args.nometa is not True:
+		meta_row = []
+		meta_row.append(file_name[jdx])
+		if 0 in meta_col_idx:
+			meta_row.append(v.numavg)
+		if 1 in meta_col_idx:
+			meta_row.append(v.volavg)
+		if 2 in meta_col_idx:
+			porosity = v.porevol/total_sample_volume[jdx]
+			meta_row.append(porosity)
+		if 3 in meta_col_idx:
+			meta_row.append(beam_power[jdx])
+		if 4 in meta_col_idx:
+			VED = beam_power[jdx]/beam_diameter[jdx]
+			meta_row.append(VED)
+		print(color(meta_row, 'yellow'))
+
+		meta_output.append(meta_row)
+
+		print(color(meta_output, 'cyan'))
+
+if args.nometa is not True:
+	with open("../output/metadata.csv", 'w') as csvout:
+		outputwriter = csv.writer(csvout, delimiter=',')
+		outputwriter.writerows(meta_output)
+		print(color("metafile saved as ../output/metadata.csv", 'green') + '\n')
+
 
 end = time.time()
 

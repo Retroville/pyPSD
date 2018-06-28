@@ -1,5 +1,4 @@
 # %% Initialization
-#import unicodecsv as csv
 import csv
 import numpy as np
 from termcolor import colored as color
@@ -7,7 +6,6 @@ import os
 import errno
 import matplotlib.pyplot as plt     
 import sys
-from pyfiglet import figlet_format
 import glob
 from argparse import ArgumentParser, ArgumentTypeError
 
@@ -25,9 +23,20 @@ def parseNumList(string):
 	elif ',' in string:
 		return [int(i)-1 for i in string.split(',')]
 	else:
-		return int(string)-1    
+		return [int(string)-1]
 
 # %% Calculations
+def sphericity(area, volume):
+	c = 8.787551325369 # Sphericity Constant
+
+	CA = [c/float(a) for a in area]
+
+	V23 = [float(v)**(2/3) for v in volume]
+
+	sphericity_col = np.array(np.multiply(CA,V23))
+
+	return sphericity_col
+
 class voldist(object):
 	def __init__(self, dat, strs, bin_edges, col_idces, *typ):
 		self.volbinsums = []
@@ -67,17 +76,19 @@ class voldist(object):
 		self.volstd = np.std(self.volume)
 		self.volmin = min(self.volume)
 		self.volmax = max(self.volume)
+		self.extmax_fromvol = self.extent[np.argmin(self.volume)]
 
 		self.numavgstr = 'Number average: ' + str(float('%.8f'%(self.numavg)))
 		self.volavgstr = 'Volume average: ' + str(float('%.8f'%(self.volavg)))
 
 		self.numstdstr = 'Standard Deviation (number): ' + str(float('%.8f'%(self.numstd)))
 		self.numminstr = 'Minimum (number): ' + str(float('%.8f'%(self.nummin)))
-		self.nummaxstr = 'maximum (number): ' + str(float('%.8f'%(self.nummax)))
+		self.nummaxstr = 'Max ' + self.extstr + '(Number) ' + str(float('%.8f'%(self.nummax)))
 
 		self.volstdstr = 'Standard Deviation (volume): ' + str(float('%.8f'%(self.volstd)))
 		self.volminstr = 'Minimum (volume): ' + str(float('%.8f'%(self.volmin)))
-		self.volmaxstr = 'maximum (volume): ' + str(float('%.8f'%(self.volmax)))
+		self.volmaxstr = 'Maximum (volume): ' + str(float('%.8f'%(self.volmax)))
+		self.volmaxstr = 'Max ' + self.extstr + ' (Volume) ' + str(float('%.8f'%(self.extmax_fromvol)))
 
 		self.porevolstr = 'Total Pore Volume: ' + str(float('%.8f'%(self.porevol))) #out of this section later pls
 
@@ -91,9 +102,6 @@ class voldist(object):
 	#	self.vline = [vlinenum, vlinevol] # actual location is idx-1
 
 		return
-
-def sphericity():
-	pass
 
 # %% Plotting and output
 	def vdplot(self):
@@ -113,31 +121,26 @@ def sphericity():
 			return
 		subhistplots(1, self.binlabels, self.counts, 'Counts', self.extstr)
 		subhistplots(2, self.binlabels, self.volbinsums, 'Volume', self.extstr)
-		plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
-		print(self.numavgstr)
-		print(self.volavgstr)
+		plt.subplots_adjust(bottom=0.26, top=0.98, hspace=0.40)
 
-		'''
-		print(max(self.realbins))
-		print(len(self.realbins)-1)
-		print(self.numavg/max(self.realbins))
-		print(self.volavg/max(self.realbins))
-		print(self.vline)
-		'''
+		plt.gcf().text(0.1,0.10,self.numavgstr)
+		plt.gcf().text(0.1,0.08,self.numstdstr)
+		plt.gcf().text(0.1,0.06,self.nummaxstr)
 
-		plt.annotate(self.numavgstr, xy=(0.55, 0.9), xytext=(0.55, 0.9), 
-							textcoords='axes fraction')
-		plt.annotate(self.volavgstr, xy=(0.55, 0.8), xytext=(0.55, 0.8),
-							textcoords='axes fraction')
+		plt.gcf().text(0.5,0.10,self.volavgstr)
+		plt.gcf().text(0.5,0.08,self.volstdstr)
+		plt.gcf().text(0.5,0.06,self.volmaxstr)
+
 		return
 
 	def writeout(self):
+		
 		binout = self.realbins[1:]
 		ostr = [self.extstr, 'Counts', 'Volume']
 		odat = np.column_stack([binout, self.counts, self.volbinsums])
 		out = np.vstack([ostr,odat])
-		with open('../output/' + self.current_file_name + '_output.csv', 'wb') as csvout:
+		with open('../output/' + self.current_file_name + '_output.csv', 'w') as csvout:
 			outputwriter = csv.writer(csvout, delimiter=',')
 			outputwriter.writerows(out)
 			print(color("Plot saved as output.csv", 'green') + '\n')
@@ -205,23 +208,6 @@ def cmd_report():
 	import pyPSD_report
 def cmd_quit():
 	sys.exit()
-def cmd_help():
-	print(figlet_format('pyPSD', font='big'))
-	print('Python Pore Size Analyzer')
-	print('Austin Rhodes (C) 2018\n')
-	egg = input()
-	if egg == 'about':
-		print('This software fulfulls the specific needs of Dr. Choo\'s research group at ' +
-			  'The University of Tennessee, Knoxville. The primary function is to take in ' +
-			  'pore/particle size data from ScanIP (csv) and generate plots/reports to quickly ' +
-			  'gauge correlations and general usefulness of the data. Originally developed ' +
-			  'in MATLAB as a ' +
-			  'way to plot basic pore size distribution histograms, the project was later ' + 
-			  'recreated in python and heavily expanded upon to add features such as ' +
-			  'scatterplots, outputting to image/csv, interactive plotting, a pdf report mode, ' +
-			  'and eventually inputs of multiple scanIP files.')
-	else:
-		return
 
 def menu_cmd(v):
 	OPTIONS = {"bins":dict( desc = "Change bins of currently active distribution plot", func = None),
@@ -229,7 +215,6 @@ def menu_cmd(v):
 			   "csv":dict( desc = "Export currently active plots to csv file", func = cmd_csv),
 			   "next":dict( desc = "Select next data column (retains volume column selection)", func = cmd_next),
 			   "report":dict( desc = "Runs pyPSD_report.py to generate a report of the data", func = cmd_report),
-			   "about":dict( desc = "Displays helpful information", func = cmd_help),
 			   "quit":dict( desc = "Exits the program", func = cmd_quit)}
 
 	while sig == True:
@@ -248,34 +233,36 @@ def menu_cmd(v):
 	return
 
 # %% Data Import & Prompt
+def track_parameter():
+	pass
+
 def filter_data(dat, filter_col, threshold):
 	m = [row for row in dat if row[filter_col] >= threshold]
 	return m
 
-def get_file(nolists=False):
+def get_file(nolists=False, noparse=False):
 	fn_prompt_strs = []
 	os.chdir('../input/')
 	files = glob.glob('*.csv')
 	files.sort()
 	for i in range(0, len(files)):  # creates prompt string: choice component
 		fn_prompt_strs.append(str(i + 1) + ' - ' + files[i])
-	fn_strs = 'Select the file to analyze:\n' + '\n'.join(fn_prompt_strs)
+	if noparse == False:
+		fn_strs = 'Select the file to analyze:\n' + '\n'.join(fn_prompt_strs)
+	elif noparse == True:
+		print('All files in input directory:\n' + '\n'.join(fn_prompt_strs))
+		return
 	while True:
 		try:
 			file_path_idx = parseNumList(input(fn_strs))
 			if (nolists == True) and (type(file_path_idx) is list):
 				print(color('(Lists not permitted when running in this mode)', 'red'))
-				raise ValueError()
+				raise ValueError
+			break
 		except ValueError:
 			print(color("Input must be integer!\n",'red'))
-		else:
-			if file_path_idx is int:
-				print(color('You chose: ', 'green') + str(file_path_idx) + '\n')
-				break
-			else:
-				print(color('You chose: ', 'green') + 'multiple files' + '\n')
-				break
 	if type(file_path_idx) is not int:
+		print(color('You chose: ', 'green') + 'multiple files' + '\n')
 		file_path = []
 		file_name = []
 		for i in file_path_idx:
@@ -284,8 +271,9 @@ def get_file(nolists=False):
 			mfile_name = mfile_name[:-4]
 			file_name.append(mfile_name)
 	else:
+		print(color('You chose: ', 'green') + files[file_path_idx] + '\n')
 		file_path = '../input/' + files[file_path_idx]
-		file_name_ = files[i]
+		file_name_ = files[file_path_idx]
 		file_name = file_name_[:-4]
 	return file_path, file_name
 
@@ -332,20 +320,24 @@ def get_bins(dat, ext_col_idx):
 	return bin_edges
 
 
-def get_datcol(strs, pstrs):
-	ext_col_strs = 'Select the data column(s):\n' + '\n'.join(pstrs)
+def get_datcol(strs, pstrs, noparse=False):
+	dstrs = [ x for x in pstrs if "Voxel:" not in x ]
+	ext_col_strs = 'Select the data column(s):\n' + '\n'.join(dstrs)
 	while True:
 		try:    
 			ext_col_idx = parseNumList(input(ext_col_strs))
 		except ValueError:
 			print(color("Input must be integer!\n",'red'))
 		else:
-			print(color('You chose: ', 'green') + str(ext_col_idx) + '\n')
+			if type(ext_col_idx) is list:
+				print(color('You chose: ', 'green') + 'Multiple Columns')
+			else:
+				print(color('You chose: ', 'green') + str(pstrs[ext_col_idx]) + '\n')
 			break
 	return ext_col_idx
 
-def get_volcol(strs, pstrs):
-	vstrs = [ x for x in pstrs if "Voxel" in x ]
+def get_volcol(strs, pstrs, noparse=False):
+	vstrs = [ x for x in pstrs if "Voxel:" in x ] # Not sure if centroid needed
 	vol_col_strs = 'Select the \'volume\' column: \n' + '\n'.join(vstrs)
 	if len(vstrs) > 1:
 		while True: 
@@ -364,6 +356,9 @@ def get_volcol(strs, pstrs):
 	print(color('You chose: ', 'green') + strs[vol_col_idx] + '\n')   
 	return vol_col_idx
 
+def list_cols(strs, pstrs):
+	print('All columns in data: \n' + '\n'.join(pstrs))
+
 # %% Main Loop
 def main():
 	global idx
@@ -377,22 +372,43 @@ def main():
 		# e.g.: De Brouckere mean dia. = (4,3),  Sauter mean dia. = (3,2)
 	dat, strs, dat_prompt_strs = get_data(get_file(nolists=True)[0])
 	vol_col_idx = get_volcol(strs, dat_prompt_strs)
-	sur_col_idx = [i for i,x in enumerate(strs) if 'Surface area' in x]
-	if len(sur_col_idx) > 0:
-		print(color('Surface Area column detected! Sphericity has been added' 
-				  + 'as a a data option...','green',attrs=['bold']))
+	sur_col_idx = [i for i,x in enumerate(strs) if 'Voxel:Surface area' in x]
 
+	if len(sur_col_idx) > 0:
+		print(color('Surface Area column detected! ',
+			'green',attrs=['bold']), end="", flush=True)
+
+		sphericity_col = sphericity(dat[:, sur_col_idx], dat[:, vol_col_idx])
+		dat = np.concatenate((dat,sphericity_col[:,None]), axis=1)
+		
+		strs.append('Sphericity')
+		dat_prompt_strs.append(str(len(strs)) + ' - ' + strs[len(strs)-1])
+
+		print(color('Sphericity has been added as a a data option.',
+			'green',attrs=['bold']))
+		
+		
 	ext_col_ = get_datcol(strs, dat_prompt_strs)
 
-#	experimental filtering code begins
+	filter_legality = input('Filter data? [Y/N]')
+	if filter_legality in ('Y', 'y'):
+		while True:
+			try:    
+				fil_col_idx = int(input('Select the filter column:\n' + '\n'.join(dat_prompt_strs)))
+			except ValueError:
+				print(color("Input must be integer!\n",'red'))
+			else:
+				print(color('You chose: ', 'green') + str(fil_col_idx) + '\n')
+				pass
+			try:    
+				filter_threshold = float(input('Enter filter threshold in mm: '))
+			except ValueError:
+				print(color("Input must be number!\n",'red'))
+			else:
+				print(color('You chose: ', 'green') + str(filter_threshold) + '\n')
+				break
 
-	print(color(dat,'red'))
-	print(color('\t\t\t>>[Filtering]>>','yellow',attrs=['blink','bold']))
-	dat = np.array(filter_data(dat, 2, 0.005))
-	print(color(dat,'blue'))
-#	data_out(dat)
-
-#	experimental filtering code ends
+		dat = np.array(filter_data(dat, fil_col_idx, filter_threshold))
 
 	while True:
 		if type(ext_col_) is int:
@@ -420,18 +436,16 @@ def main():
 			menu_cmd(v)
 	return
 
-#-----------------^[ Definitions ]^----------------v[ Script ]v-----------------
 if __name__ == "__main__":
-	'''
-	parser = ArgumentParser()
-	parser.add_argument('-l', "--list", action='store_true')
-	args = parser.parse_args()
-	if args.list is True:
-		dat_prompt_strs = '\n'.join(get_data(get_file(nolists=True)[0])[2])
-		print(dat_prompt_strs + '\n')
-	else:
-	'''
 	main()
 
-# END, FIN, QED, ETC
 
+
+
+
+
+
+
+
+
+# END, FIN, QED, ETC
