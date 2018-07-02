@@ -14,7 +14,7 @@ start = time.time()
 savetime = 0
 
 try:
-	os.makedirs('../output/')
+	os.makedirs('../output/csv/')
 	os.makedirs('../input/')
 except OSError as e:
 	if e.errno != errno.EEXIST:
@@ -59,10 +59,13 @@ def get_meta_cols():
 				 'Volumetric Energy Density')	#[4] E/V (v is melt pool volume or beam dia (??))
 	for i in range(0, len(meta_col_base)):
 		meta_prompt_strs.append(str(i + 1) + ' - ' + meta_col_base[i])
-	meta_prompt = '\nSelect the meta column(s) to be output:\n' + '\n'.join(meta_prompt_strs)
+	meta_prompt = '\nSelect any meta column(s) to be output:\n' + '\n'.join(meta_prompt_strs)
 	while True:
+		meta_prompt_answer = input(meta_prompt)
+		if meta_prompt_answer == "":
+			return None, None
 		try:    
-			meta_col_idx = parseNumList(input(meta_prompt))
+			meta_col_idx = parseNumList(meta_prompt_answer)
 		except ValueError:
 			print(color("Input must be integer!\n",'red'))
 		else:
@@ -77,9 +80,11 @@ parser.add_argument('-f', "--files", nargs='?', type=parseNumList, const=False)
 parser.add_argument('-c', "--columns", nargs='?', type=parseNumList, const=False)
 parser.add_argument('-v', "--volume", nargs='?', type=parseNumList, const=False)
 parser.add_argument('-t', "--threshold", nargs=2, type=float) # filter_col filter_threshold
-parser.add_argument('-l', "--list", nargs='?', const=True)
-parser.add_argument('-s', "--nosphericity", nargs='?', const=True)
-parser.add_argument('-m', "--nometa", nargs='?', const=True)
+parser.add_argument("--list", action='store_true')
+parser.add_argument("--nosphericity", action='store_true')
+parser.add_argument("--nometa", action='store_true')
+parser.add_argument("--allcolumns", action='store_true')
+parser.add_argument("--csv", action='store_true')
 args = parser.parse_args()
 
 if args.files is not None:
@@ -98,27 +103,33 @@ eflag = False
 if args.nometa is not True:
 	meta_output = []
 	meta_col_strs, meta_col_idx = get_meta_cols()
-	meta_output.append(meta_col_strs)
+	if meta_col_strs == None and meta_col_idx == None:
+		args.nometa = True
+	else:
+		meta_output.append(meta_col_strs)
 
-	# Objectify this VVV
-	beam_power=[]
-	total_sample_volume=[]
-	beam_diameter=[]
-	for jdx, fp in enumerate(file_path):
-		print('\nEnter the following parameters for ' + file_name[jdx] + ': ')
-		if 3 in meta_col_idx or 4 in meta_col_idx:
-			beam_power.append(float(input('Beam Power: ')))
-		if 2 in meta_col_idx:
-			total_sample_volume.append(float(input('Total Sample Volume: ')))
-		if 4 in meta_col_idx:
-			beam_diameter.append(float(input('Beam Diameter: ')))
+		# Objectify this VVV
+		beam_power=[]
+		total_sample_volume=[]
+		beam_diameter=[]
+		for jdx, fp in enumerate(file_path):
+			print('\nEnter the following parameters for ' + file_name[jdx] + ': ')
+			if 3 in meta_col_idx or 4 in meta_col_idx:
+				beam_power.append(float(input('Beam Power: ')))
+			if 2 in meta_col_idx:
+				total_sample_volume.append(float(input('Total Sample Volume: ')))
+			if 4 in meta_col_idx:
+				beam_diameter.append(float(input('Beam Diameter: ')))
 
 
 for jdx, fp in enumerate(file_path):
 
+	distribution_values = [] #reset dist values per file
+
 	dat, strs, dat_prompt_strs = get_data(file_path[jdx])
 
-	if args.list is not None: # Breaks if '-l' arg is parsed
+	print(args.list)
+	if args.list is True: # Breaks if '-l' arg is parsed
 		print('\n')
 		get_file(noparse=True)
 		print('\n')
@@ -139,7 +150,7 @@ for jdx, fp in enumerate(file_path):
 	sur_col_idx = [i for i,x in enumerate(strs) if 'Voxel:Surface area' in x]
 	# Detect Surface Area column and calculate sphericity
 
-	if (len(sur_col_idx) > 0) and (args.nosphericity is None):
+	if (len(sur_col_idx) > 0) and (args.nosphericity is False):
 		print(color('Surface Area column detected! ',
 			'green',attrs=['bold']), end="", flush=True)
 
@@ -152,13 +163,16 @@ for jdx, fp in enumerate(file_path):
 
 		print(color('Sphericity has been added as a a data option.',
 			'green',attrs=['bold']))
-	elif (len(sur_col_idx) > 0) and (args.nosphericity is not None):
+	elif (len(sur_col_idx) > 0) and (args.nosphericity is True):
 		print(color('Surface Area column detected, but suppressed. Ignoring. . .',
 			'red',attrs=['bold']))
 
 	if args.columns is not None:
 		if args.columns is False:
-			ext_col_ = [i for i,j in enumerate(strs) if "Voxel:" not in j]
+			if args.allcolumns is True:
+				ext_col_ = [i for i,j in enumerate(strs)]
+			else:
+				ext_col_ = [i for i,j in enumerate(strs) if "Voxel:" not in j]
 		else:
 			ext_col_ = args.columns
 	elif eflag == False:
@@ -210,7 +224,6 @@ for jdx, fp in enumerate(file_path):
 	print('\nbeginning page creation loop...\n')
 	print('setting current page to 1...')
 	currentpage = 1
-
 
 	with PdfPages('../output/' + filename + '.pdf') as pdf:
 
@@ -295,6 +308,17 @@ for jdx, fp in enumerate(file_path):
 				return
 			subhistplots(1, v.binlabels, v.counts, 'Counts', v.extstr)
 			subhistplots(2, v.binlabels, v.volbinsums, 'Volume', v.extstr)
+
+			# Append histogram data to this file's csv output
+			dv_binlabels = ['Bin Max (' + v.extstr + ')'] + v.realbins[1:].tolist()
+			dv_counts = ['Counts'] + v.counts.tolist()
+			dv_volbinsums = ['Volume'] + v.volbinsums
+			distribution_values.append(dv_binlabels)
+			distribution_values.append(dv_counts)
+			distribution_values.append(dv_volbinsums)
+			distribution_values.append('')
+
+
 			plt.suptitle(supertitle, fontsize=12)
 		#	plt.gcf().tight_layout(rect=[0.05, 0.2, 0.95, 0.95])
 			plt.subplots_adjust(bottom=0.3, top=0.9, hspace=0.3)
@@ -331,6 +355,14 @@ for jdx, fp in enumerate(file_path):
 		print('done')
 
 		savepage()
+
+		with open('../output/csv/' + filename + '_values.csv', 'w') as csvout:
+			outputwriter = csv.writer(csvout, delimiter=',')
+			outputwriter.writerows(distribution_values)
+			print(color('distribution values saved as ../output/csv/' 
+						+ filename + '_values.csv', 'green') + '\n')
+
+
 	print(color('Report complete at ../output/' + filename + '.pdf', 'green'))
 
 	# CSV meta outputs
@@ -356,10 +388,10 @@ for jdx, fp in enumerate(file_path):
 		print(color(meta_output, 'cyan'))
 
 if args.nometa is not True:
-	with open("../output/metadata.csv", 'w') as csvout:
+	with open("../output/csv/metadata.csv", 'w') as csvout:
 		outputwriter = csv.writer(csvout, delimiter=',')
 		outputwriter.writerows(meta_output)
-		print(color("metafile saved as ../output/metadata.csv", 'green') + '\n')
+		print(color("metafile saved as ../output/csv/metadata.csv", 'green') + '\n')
 
 
 end = time.time()
