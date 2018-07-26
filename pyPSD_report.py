@@ -3,6 +3,7 @@
 from pyPSD import *
 import numpy as np
 import matplotlib
+matplotlib.use('TkAgg')
 from matplotlib.backends.backend_pdf import PdfPages
 from pylab import *
 from termcolor import colored as color

@@ -4,10 +4,13 @@ import numpy as np
 from termcolor import colored as color
 import os
 import errno
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt     
 import sys
 import glob
 from argparse import ArgumentParser, ArgumentTypeError
+
 
 try:
 	os.makedirs('../output/')
@@ -15,6 +18,9 @@ try:
 except OSError as e:
 	if e.errno != errno.EEXIST:
 		raise
+
+def color(input, nonsense, attrs='Junk'):
+	return input
 
 def parseNumList(string):
 	if ':' in string:
@@ -375,8 +381,8 @@ def main():
 	sur_col_idx = [i for i,x in enumerate(strs) if 'Voxel:Surface area' in x]
 
 	if len(sur_col_idx) > 0:
-		print(color('Surface Area column detected! ',
-			'green',attrs=['bold']), end="", flush=True)
+	#	print(color('Surface Area column detected! ',
+	#		'green',attrs=['bold']), end="", flush=True)
 
 		sphericity_col = sphericity(dat[:, sur_col_idx], dat[:, vol_col_idx])
 		dat = np.concatenate((dat,sphericity_col[:,None]), axis=1)
@@ -384,8 +390,8 @@ def main():
 		strs.append('Sphericity')
 		dat_prompt_strs.append(str(len(strs)) + ' - ' + strs[len(strs)-1])
 
-		print(color('Sphericity has been added as a a data option.',
-			'green',attrs=['bold']))
+	#	print(color('Sphericity has been added as a a data option.',
+	#		'green',attrs=['bold']))
 		
 		
 	ext_col_ = get_datcol(strs, dat_prompt_strs)

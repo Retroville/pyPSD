@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['pypsd_report.py'],
-             pathex=['/anaconda3', '/Users/warhodes/Documents/pyPSD/code'],
+             pathex=['/Users/warhodes/Documents/pyPSD/code'],
              binaries=[],
              datas=[],
              hiddenimports=[],
