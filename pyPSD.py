@@ -22,8 +22,11 @@ except OSError as e:
     if e.errno != errno.EEXIST:
         raise
 
+
+'''Make this optional later
 def color(input, nonsense, attrs='Junk'):
     return input
+'''
 
 def parseNumList(string):
     if ':' in string:
@@ -230,7 +233,7 @@ def menu_cmd(v):
         print("\nPlease choose an option:")
         for key in OPTIONS.keys():
             print("\t" + key + "\t" + OPTIONS[key]["desc"])
-        cmd = input('Selection: ')
+        cmd = input('Selection: ').rstrip()
         if not cmd in OPTIONS.keys():
             print(color("Invalid selection", 'red') + '\n')
         elif cmd == 'bins':
@@ -263,10 +266,12 @@ def get_file(nolists=False, noparse=False):
         return
     while True:
         try:
-            file_path_idx = parseNumList(input(fn_strs))
+            file_path_idx = parseNumList(input(fn_strs).rstrip())
             if (nolists == True) and (type(file_path_idx) is list):
-                print(color('(Lists not permitted when running in this mode)', 'red'))
-                raise ValueError
+                if len(file_path_idx) != 1:
+                    print(color('Lists are not permitted in this mode, defaulting to first list item','red'))
+                file_path_idx = file_path_idx[0]
+
             break
         except ValueError:
             print(color("Input must be integer!\n",'red'))
@@ -314,7 +319,7 @@ def get_data(file_path):
 def get_bins(dat, ext_col_idx):
     while True:
         my_range = input('Input the range of the x axis histogram bins: \n'
-                 '(Leave blank to bin automatically)')
+                 '(Leave blank to bin automatically)').rstrip()
         print(color('You Chose: ', 'green') + my_range + '\n')
         try:
             if my_range:
@@ -334,7 +339,7 @@ def get_datcol(strs, pstrs, noparse=False):
     ext_col_strs = 'Select the data column(s):\n' + '\n'.join(dstrs)
     while True:
         try:    
-            ext_col_idx = parseNumList(input(ext_col_strs))
+            ext_col_idx = parseNumList(input(ext_col_strs).rstrip())
         except ValueError:
             print(color("Input must be integer!\n",'red'))
         else:
@@ -350,7 +355,7 @@ def get_volcol(strs, pstrs, noparse=False):
     vol_col_strs = 'Select the \'volume\' column: \n' + '\n'.join(vstrs)
     if len(vstrs) > 1:
         while True: 
-            vol_col_idx = input(vol_col_strs)
+            vol_col_idx = input(vol_col_strs).rstrip()
             try:
                 vol_col_idx = int(vol_col_idx) - 1
             except ValueError:
@@ -399,18 +404,18 @@ def main():
         
     ext_col_ = get_datcol(strs, dat_prompt_strs)
 
-    filter_legality = input('Filter data? [Y/N]')
+    filter_legality = input('Filter data? [Y/N]').rstrip()
     if filter_legality in ('Y', 'y'):
         while True:
             try:    
-                fil_col_idx = int(input('Select the filter column:\n' + '\n'.join(dat_prompt_strs)))
+                fil_col_idx = int(input('Select the filter column:\n' + '\n'.join(dat_prompt_strs)).rstrip())
             except ValueError:
                 print(color("Input must be integer!\n",'red'))
             else:
                 print(color('You chose: ', 'green') + str(fil_col_idx) + '\n')
                 pass
             try:    
-                filter_threshold = float(input('Enter filter threshold in mm: '))
+                filter_threshold = float(input('Enter filter threshold in mm: ').rstrip())
             except ValueError:
                 print(color("Input must be number!\n",'red'))
             else:

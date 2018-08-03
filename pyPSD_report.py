@@ -62,7 +62,7 @@ def get_meta_cols():
 		meta_prompt_strs.append(str(i + 1) + ' - ' + meta_col_base[i])
 	meta_prompt = '\nSelect any meta column(s) to be output:\n' + '\n'.join(meta_prompt_strs)
 	while True:
-		meta_prompt_answer = input(meta_prompt)
+		meta_prompt_answer = input(meta_prompt).rstrip()
 		if meta_prompt_answer == "":
 			return None, None
 		try:    
@@ -116,11 +116,11 @@ if args.nometa is not True:
 		for jdx, fp in enumerate(file_path):
 			print('\nEnter the following parameters for ' + file_name[jdx] + ': ')
 			if 3 in meta_col_idx or 4 in meta_col_idx:
-				beam_power.append(float(input('Beam Power: ')))
+				beam_power.append(float(input('Beam Power: ').rstrip()))
 			if 2 in meta_col_idx:
-				total_sample_volume.append(float(input('Total Sample Volume: ')))
+				total_sample_volume.append(float(input('Total Sample Volume: ').rstrip()))
 			if 4 in meta_col_idx:
-				beam_diameter.append(float(input('Beam Diameter: ')))
+				beam_diameter.append(float(input('Beam Diameter: ').rstrip()))
 
 
 for jdx, fp in enumerate(file_path):
