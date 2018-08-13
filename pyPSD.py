@@ -22,7 +22,6 @@ except OSError as e:
     if e.errno != errno.EEXIST:
         raise
 
-
 '''Make this optional later
 def color(input, nonsense, attrs='Junk'):
     return input
@@ -39,7 +38,7 @@ def parseNumList(string):
 
 # %% Calculations
 def sphericity(area, volume):
-    c = 8.787551325369 # Sphericity Constant
+    c = 4.835975860 # Sphericity Constant
 
     CA = [c/float(a) for a in area]
 
@@ -100,7 +99,7 @@ class voldist(object):
         self.volstdstr = 'Standard Deviation (volume): ' + str(float('%.8f'%(self.volstd)))
         self.volminstr = 'Minimum (volume): ' + str(float('%.8f'%(self.volmin)))
         self.volmaxstr = 'Maximum (volume): ' + str(float('%.8f'%(self.volmax)))
-        self.volmaxstr = 'Max ' + self.extstr + ' (Volume) ' + str(float('%.8f'%(self.extmax_fromvol)))
+    #   self.volmaxstr = 'Max ' + self.extstr + ' (Volume) ' + str(float('%.8f'%(self.extmax_fromvol)))
 
         self.porevolstr = 'Total Pore Volume: ' + str(float('%.8f'%(self.porevol))) #out of this section later pls
 
@@ -142,7 +141,7 @@ class voldist(object):
 
         plt.gcf().text(0.5,0.10,self.volavgstr)
         plt.gcf().text(0.5,0.08,self.volstdstr)
-        plt.gcf().text(0.5,0.06,self.volmaxstr)
+    #   plt.gcf().text(0.5,0.06,self.volmaxstr) Not sure what this represents
 
         return
 
@@ -335,7 +334,7 @@ def get_bins(dat, ext_col_idx):
 
 
 def get_datcol(strs, pstrs, noparse=False):
-    dstrs = [ x for x in pstrs if "Voxel:" not in x ]
+    dstrs = [ x for x in pstrs if "Count" not in x ]
     ext_col_strs = 'Select the data column(s):\n' + '\n'.join(dstrs)
     while True:
         try:    
@@ -451,6 +450,14 @@ def main():
     return
 
 if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("--init", action='store_true')
+    args = parser.parse_args()
+
+    if args.init is not None:
+        print(color('pyPSD successfully initialized!', 'green'))
+        print('Closing...')
+        quit()
     main()
 
 

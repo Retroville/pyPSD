@@ -322,25 +322,9 @@ for jdx, fp in enumerate(file_path):
 			dv_counts = ['Counts'] + v.counts.tolist()
 			dv_volbinsums = ['Volume'] + v.volbinsums
 
-			print('dv_binlabels')
-			print(dv_binlabels)
 			dv_all.append(dv_binlabels)
 			dv_all.append(dv_counts)
 			dv_all.append(dv_volbinsums)
-			print('dv_all')
-			print(dv_all)
-
-			'''
-			distribution_values = list(zip(dv_binlabels, dv_counts, dv_volbinsums))
-			print(color(distribution_values,'yellow'))
-			distribution_values = [] #reset dist values per file
-			distribution_values.append(dv_binlabels)
-			distribution_values.append(dv_counts)
-			distribution_values.append(dv_volbinsums)
-			distribution_values.append('')
-			zip(*distribution_values)
-			print(distribution_values)
-			'''
 
 			plt.suptitle(supertitle, fontsize=12)
 		#	plt.gcf().tight_layout(rect=[0.05, 0.2, 0.95, 0.95])
@@ -384,10 +368,7 @@ for jdx, fp in enumerate(file_path):
 		distribution_values = []
 		for i in range(0,len(dv_all[0])):
 			distrow = [item[i] for item in dv_all]
-			print(distrow)
 			distribution_values.append(distrow)
-			print(color(distribution_values,'blue'))
-
 
 		#Export distribution table to csv row by row
 		with open('../output/csv/' + filename + '_values.csv', 'w') as csvout:
