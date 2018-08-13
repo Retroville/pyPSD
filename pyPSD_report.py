@@ -86,6 +86,7 @@ parser.add_argument("--nosphericity", action='store_true')
 parser.add_argument("--nometa", action='store_true')
 parser.add_argument("--allcolumns", action='store_true')
 parser.add_argument("--csv", action='store_true')
+parser.add_argument("--bins", nargs=1, type=int) # This is returned as a list for god knows why
 args = parser.parse_args()
 
 if args.files is not None:
@@ -125,7 +126,7 @@ if args.nometa is not True:
 
 for jdx, fp in enumerate(file_path):
 
-	distribution_values = [] #reset dist values per file
+	dv_all = [] # New distribution values per each file
 
 	dat, strs, dat_prompt_strs = get_data(file_path[jdx])
 
@@ -173,13 +174,18 @@ for jdx, fp in enumerate(file_path):
 			if args.allcolumns is True:
 				ext_col_ = [i for i,j in enumerate(strs)]
 			else:
-				ext_col_ = [i for i,j in enumerate(strs) if "Voxel:" not in j]
+				ext_col_ = [i for i,j in enumerate(strs) if "Count" not in j]
 		else:
 			ext_col_ = args.columns
 	elif eflag == False:
 		ext_col_ = get_datcol(strs, dat_prompt_strs)
 		eflag = True
-
+	
+	if args.bins is not None:
+		binz = args.bins[0]
+	else:
+		binz = 25
+	
 	if args.threshold is not None:
 		prefilt = len(dat)
 
@@ -288,7 +294,7 @@ for jdx, fp in enumerate(file_path):
 
 			#Distribution plots
 			print('performing volume distribution calculations' + '...', end="", flush=True)
-			v = voldist(dat, strs, 25, [vol_col_idx, ext_col_idx])
+			v = voldist(dat, strs, binz, [vol_col_idx, ext_col_idx])
 			print('done')
 			print('formatting histogram page' + '...', end="", flush=True)
 			plt.figure(num=2, figsize=(8.5, 11))
@@ -311,26 +317,42 @@ for jdx, fp in enumerate(file_path):
 			subhistplots(2, v.binlabels, v.volbinsums, 'Volume', v.extstr)
 
 			# Append histogram data to this file's csv output
+
 			dv_binlabels = ['Bin Max (' + v.extstr + ')'] + v.realbins[1:].tolist()
 			dv_counts = ['Counts'] + v.counts.tolist()
 			dv_volbinsums = ['Volume'] + v.volbinsums
+
+			print('dv_binlabels')
+			print(dv_binlabels)
+			dv_all.append(dv_binlabels)
+			dv_all.append(dv_counts)
+			dv_all.append(dv_volbinsums)
+			print('dv_all')
+			print(dv_all)
+
+			'''
+			distribution_values = list(zip(dv_binlabels, dv_counts, dv_volbinsums))
+			print(color(distribution_values,'yellow'))
+			distribution_values = [] #reset dist values per file
 			distribution_values.append(dv_binlabels)
 			distribution_values.append(dv_counts)
 			distribution_values.append(dv_volbinsums)
 			distribution_values.append('')
-
+			zip(*distribution_values)
+			print(distribution_values)
+			'''
 
 			plt.suptitle(supertitle, fontsize=12)
 		#	plt.gcf().tight_layout(rect=[0.05, 0.2, 0.95, 0.95])
 			plt.subplots_adjust(bottom=0.3, top=0.9, hspace=0.3)
 
-			plt.gcf().text(0.1,0.18,v.numavgstr)
-			plt.gcf().text(0.1,0.15,v.numstdstr)
-			plt.gcf().text(0.1,0.12,v.nummaxstr)
+			plt.gcf().text(0.1,0.20,v.numavgstr)
+			plt.gcf().text(0.1,0.185,v.numstdstr)
+			plt.gcf().text(0.1,0.17,v.nummaxstr)
 
-			plt.gcf().text(0.5,0.18,v.volavgstr)
-			plt.gcf().text(0.5,0.15,v.volstdstr)
-			plt.gcf().text(0.5,0.12,v.volmaxstr)
+			plt.gcf().text(0.1,0.155,v.volavgstr)
+			plt.gcf().text(0.1,0.14,v.volstdstr)
+			plt.gcf().text(0.1,0.125,v.volmaxstr)
 
 			'''
 			plt.subplot(3, 1, 3)
@@ -348,7 +370,7 @@ for jdx, fp in enumerate(file_path):
 
 			print(color('distributions complete', 'green'))
 
-		#Metadata outputs
+		#Summary outputs
 		print(color('all plots complete', 'green'))
 		print('formatting meta page' + '...', end="", flush=True)
 		plt.figure(num=3, figsize=(8.5,11))
@@ -357,6 +379,17 @@ for jdx, fp in enumerate(file_path):
 
 		savepage()
 
+
+		#Format distribution table to prep for export
+		distribution_values = []
+		for i in range(0,len(dv_all[0])):
+			distrow = [item[i] for item in dv_all]
+			print(distrow)
+			distribution_values.append(distrow)
+			print(color(distribution_values,'blue'))
+
+
+		#Export distribution table to csv row by row
 		with open('../output/csv/' + filename + '_values.csv', 'w') as csvout:
 			outputwriter = csv.writer(csvout, delimiter=',')
 			outputwriter.writerows(distribution_values)
@@ -389,10 +422,10 @@ for jdx, fp in enumerate(file_path):
 		print(color(meta_output, 'cyan'))
 
 if args.nometa is not True:
-	with open("../output/csv/metadata.csv", 'w') as csvout:
+	with open("../output/csv/summary.csv", 'w') as csvout:
 		outputwriter = csv.writer(csvout, delimiter=',')
 		outputwriter.writerows(meta_output)
-		print(color("metafile saved as ../output/csv/metadata.csv", 'green') + '\n')
+		print(color("metafile saved as ../output/csv/summary.csv", 'green') + '\n')
 
 
 end = time.time()
