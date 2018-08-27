@@ -14,13 +14,6 @@ import time
 start = time.time()
 savetime = 0
 
-try:
-	os.makedirs('../output/csv/')
-	os.makedirs('../input/')
-except OSError as e:
-	if e.errno != errno.EEXIST:
-		raise
-
 def savepage():
 	global savetime
 
@@ -34,67 +27,87 @@ def savepage():
 	ntime = time.time() - mtime
 	savetime = savetime + ntime
 
-def get_file_list(frange):
+def get_file_list(frange, io):
 	if type(frange) is int:
 		frange = [frange]
 	file_path = []
 	file_name = []
-	os.chdir('../input/')
+	os.chdir(io[0])
 	files = glob.glob('*.csv')
 	files.sort()
 	if frange is False:
 		frange = range(len(files))
 	for i in frange:
-		file_path.append('../input/' + files[i])
+		file_path.append(io[0] + files[i])
 		mfile_name = files[i]
 		mfile_name = mfile_name[:-4]
 		file_name.append(mfile_name)
 	return file_path, file_name
 
-def get_meta_cols():
-	meta_prompt_strs = []
-	meta_col_base = ('Number Average',			#[0] v.numavg
-				 'Volume Average',				#[1] v.volavg
-				 'Porosity',					#[2] porevol/tvol
-				 'Beam Power', 					#[3] --
-				 'Volumetric Energy Density')	#[4] E/V (v is melt pool volume or beam dia (??))
-	for i in range(0, len(meta_col_base)):
-		meta_prompt_strs.append(str(i + 1) + ' - ' + meta_col_base[i])
-	meta_prompt = '\nSelect any meta column(s) to be output:\n' + '\n'.join(meta_prompt_strs)
-	while True:
-		meta_prompt_answer = input(meta_prompt).rstrip()
-		if meta_prompt_answer == "":
-			return None, None
-		try:    
-			meta_col_idx = parseNumList(meta_prompt_answer)
-		except ValueError:
-			print(color("Input must be integer!\n",'red'))
-		else:
-			break
+'''Columns for summary:
 
-	meta_col_strs = ['Filename'] + [meta_col_base[i] for i in meta_col_idx]
-	return meta_col_strs, meta_col_idx
+	Sample Name
+	Laser Power
+	Total Volume
+	Count
+	Porosity
+  [ Total X
+	Avg. X
+	STD of X
+	Min X
+	Max X ]
 
+'''
 
 parser = ArgumentParser()
+parser.add_argument('-i', "--io", nargs=2, type=str) # Asks for input and output folders
 parser.add_argument('-f', "--files", nargs='?', type=parseNumList, const=False)
 parser.add_argument('-c', "--columns", nargs='?', type=parseNumList, const=False)
 parser.add_argument('-v', "--volume", nargs='?', type=parseNumList, const=False)
 parser.add_argument('-t', "--threshold", nargs=2, type=float) # filter_col filter_threshold
 parser.add_argument("--list", action='store_true')
 parser.add_argument("--nosphericity", action='store_true')
-parser.add_argument("--nometa", action='store_true')
+parser.add_argument("--nosummary", action='store_true')
+parser.add_argument("--fullsummary", action='store_true')
 parser.add_argument("--allcolumns", action='store_true')
 parser.add_argument("--csv", action='store_true')
+parser.add_argument("--init", action='store_true')
 parser.add_argument("--bins", nargs=1, type=int) # This is returned as a list for god knows why
 args = parser.parse_args()
 
+if args.nosummary is True:
+	is_summary = False
+else:
+	is_summary = True
+
+# Assign input vars
+global io
+
+if args.io is not None:
+	io = args.io
+else:
+	io = ['../input/','../output/']
+
+print('Input path: ' + io[0])
+print('Output path ' + io[1])
+
+try:
+	os.makedirs(io[1] + 'csv/')
+	os.makedirs(io[0])
+except OSError as e:
+	if e.errno != errno.EEXIST:
+		raise
+
+if args.init is True:
+	print('pyPSD successfully initialized!')
+	quit() # This is terrible practice
+
 if args.files is not None:
-	file_path, file_name = get_file_list(args.files)
+	file_path, file_name = get_file_list(args.files, io)
 else:
 	print(color('\n(Careful, these might not be in the order ' + 
 					'you expect)','red'))
-	file_path, file_name = get_file()
+	file_path, file_name = get_file(infolder=io[0])
 if type(file_path) is not list:
 	file_path = [file_path]
 	file_name = [file_name]
@@ -102,13 +115,17 @@ if type(file_path) is not list:
 vflag = False
 eflag = False
 
-if args.nometa is not True:
-	meta_output = []
-	meta_col_strs, meta_col_idx = get_meta_cols()
-	if meta_col_strs == None and meta_col_idx == None:
-		args.nometa = True
+	#summary
+		#	beam_diameter =input('Beam Diameter: ').rstrip()
+
+'''
+if is_summary is True:
+	summ_output = []
+	summ_col_strs, summ_col_idx = get_summ_cols()
+	if summ_col_strs == None and summ_col_idx == None:
+		args.nosumm = True
 	else:
-		meta_output.append(meta_col_strs)
+		summ_output.append(summ_col_strs)
 
 		# Objectify this VVV
 		beam_power=[]
@@ -116,17 +133,31 @@ if args.nometa is not True:
 		beam_diameter=[]
 		for jdx, fp in enumerate(file_path):
 			print('\nEnter the following parameters for ' + file_name[jdx] + ': ')
-			if 3 in meta_col_idx or 4 in meta_col_idx:
+			if 3 in summ_col_idx or 4 in summ_col_idx:
 				beam_power.append(float(input('Beam Power: ').rstrip()))
-			if 2 in meta_col_idx:
+			if 2 in summ_col_idx:
 				total_sample_volume.append(float(input('Total Sample Volume: ').rstrip()))
-			if 4 in meta_col_idx:
+			if 4 in summ_col_idx:
 				beam_diameter.append(float(input('Beam Diameter: ').rstrip()))
+'''
 
+summary2 = []
+
+pore_counts = ['Pore Counts']
+
+sample_name = ['Sample Name']
+
+total_pore_volume = ['Total Pore Volume']
+
+beam_power = ['Laser Power']
 
 for jdx, fp in enumerate(file_path):
 
 	dv_all = [] # New distribution values per each file
+
+	summ_row_2_strs = []
+
+	summ_row_2 = []
 
 	dat, strs, dat_prompt_strs = get_data(file_path[jdx])
 
@@ -218,7 +249,7 @@ for jdx, fp in enumerate(file_path):
 	if not len(dat[0])%8 == 0:
 		numofpages += 1
 
-	print('creating empty pdf file at ' + '../output/' + filename + '.pdf:\n\t')
+	print('creating empty pdf file at ' + io[1]+ filename + '.pdf:\n\t')
 	pages = [plt.figure(num=n+1, figsize=(8.5, 11)) for n in range(numofpages)]
 	print(str(numofpages) + ' empty pages\n\t' + str(len(pages)) + 
 			' active empty figures')
@@ -232,7 +263,9 @@ for jdx, fp in enumerate(file_path):
 	print('setting current page to 1...')
 	currentpage = 1
 
-	with PdfPages('../output/' + filename + '.pdf') as pdf:
+	with PdfPages(io[1] + filename + '.pdf') as pdf:
+
+
 
 		for idx in range(0, nreports):
 
@@ -256,7 +289,8 @@ for jdx, fp in enumerate(file_path):
 				plt.subplot(4, 2, (i%8)+1)
 
 				print('creating scatterplot ' + str(i+1) + ' of ' + str(len(dat[0])))
-				print('plotting ' + strs[i] + ' [pos' + str((i%8)+1) + ' pg' + str((i//8)+1) + ']...', end="", flush=True)
+				print('plotting ' + strs[i] + ' [pos' + str((i%8)+1) + ' pg' + 
+					str((i//8)+1) + ']...', end="", flush=True)
 
 				if not i == ext_col_idx:
 					plt.scatter(dat[:, i], dat[:, ext_col_idx], marker='|', c='black', s=1, rasterized=True)
@@ -327,7 +361,6 @@ for jdx, fp in enumerate(file_path):
 			dv_all.append(dv_volbinsums)
 
 			plt.suptitle(supertitle, fontsize=12)
-		#	plt.gcf().tight_layout(rect=[0.05, 0.2, 0.95, 0.95])
 			plt.subplots_adjust(bottom=0.3, top=0.9, hspace=0.3)
 
 			plt.gcf().text(0.1,0.20,v.numavgstr)
@@ -340,7 +373,7 @@ for jdx, fp in enumerate(file_path):
 
 			'''
 			plt.subplot(3, 1, 3)
-			plt.annotate('This is where metadata for an individual column might go'
+			plt.annotate('This is where summdata for an individual column might go'
 				, xy=(0.25,0.5), xytext=(0.2,0.5))
 			plt.annotate('Total Volume: ' + str(m_tvol)
 				, xy=(0.25,0.4), xytext=(0.2,0.4))
@@ -354,14 +387,22 @@ for jdx, fp in enumerate(file_path):
 
 			print(color('distributions complete', 'green'))
 
-		#Summary outputs
-		print(color('all plots complete', 'green'))
-		print('formatting meta page' + '...', end="", flush=True)
-		plt.figure(num=3, figsize=(8.5,11))
-		plt.clf()
-		print('done')
-
-		savepage()
+			# APPENDING TO SUMMARY EXPORT
+		#	summ_row_2
+		#	summ_row_2_strs
+			summ_col_str = strs[ext_col_idx]
+			summ_dat = dat[:, ext_col_idx]
+			print('Performing calculations for column ' + summ_col_str + '...')
+			summ_row_2_strs.append('Total ' + strs[ext_col_idx])
+			summ_row_2.append(v.numtot)
+			summ_row_2_strs.append('Avg. ' + strs[ext_col_idx])
+			summ_row_2.append(v.numavg)
+			summ_row_2_strs.append('STD of ' + strs[ext_col_idx])
+			summ_row_2.append(v.numstd)
+			summ_row_2_strs.append('Minimum ' + strs[ext_col_idx])
+			summ_row_2.append(v.nummin)
+			summ_row_2_strs.append('Maximum ' + strs[ext_col_idx])
+			summ_row_2.append(v.nummax)
 
 
 		#Format distribution table to prep for export
@@ -371,42 +412,54 @@ for jdx, fp in enumerate(file_path):
 			distribution_values.append(distrow)
 
 		#Export distribution table to csv row by row
-		with open('../output/csv/' + filename + '_values.csv', 'w') as csvout:
+		with open(io[1] + '/csv/' + filename + '_values.csv', 'w') as csvout:
 			outputwriter = csv.writer(csvout, delimiter=',')
 			outputwriter.writerows(distribution_values)
-			print(color('distribution values saved as ../output/csv/' 
+			print(color('distribution values saved as ' + io[1] + '/csv/' 
 						+ filename + '_values.csv', 'green') + '\n')
 
+	#Append that files summary2 row to the main summary2
+	summary2.append(summ_row_2)
+	print(summary2)
 
-	print(color('Report complete at ../output/' + filename + '.pdf', 'green'))
 
-	# CSV meta outputs
-	if args.nometa is not True:
-		meta_row = []
-		meta_row.append(file_name[jdx])
-		if 0 in meta_col_idx:
-			meta_row.append(v.numavg)
-		if 1 in meta_col_idx:
-			meta_row.append(v.volavg)
-		if 2 in meta_col_idx:
-			porosity = v.porevol/total_sample_volume[jdx]
-			meta_row.append(porosity)
-		if 3 in meta_col_idx:
-			meta_row.append(beam_power[jdx])
-		if 4 in meta_col_idx:
-			VED = beam_power[jdx]/beam_diameter[jdx]
-			meta_row.append(VED)
-		print(color(meta_row, 'yellow'))
+	print(color('Report complete at ' + io[1] + filename + '.pdf', 'green'))
 
-		meta_output.append(meta_row)
+	pore_counts.append(v.porecount)
+	sample_name.append(file_name)
+	total_pore_volume.append(v.porevol)
 
-		print(color(meta_output, 'cyan'))
 
-if args.nometa is not True:
-	with open("../output/csv/summary.csv", 'w') as csvout:
+	# CSV summ outputs
+if is_summary is True:
+	for jdx, fp in enumerate(file_path):
+		print('\nEnter the following parameters for ' + file_name[jdx] + 
+			': \n(leave blank if not applicable) ')
+		beam_power.append(float(input('Laser Power: ').rstrip()))
+		total_sample_volume.append(float(input('Total Sample Volume: ').rstrip()))
+
+	if total_sample_volume:
+		tpv = total_pore_volume
+		tsv = total_sample_volume
+		porosity = ['Porosity'] + [tpv/tsv for tpv,tsv in zip(tpv,tsv)]
+	else:
+		porosity = ['Porosity'] + total_sample_volume
+
+	# At this point the following variables exist: (? - optional, ! - special)
+	#	beam_power
+	#	total_sample_volume
+	# ? porosity
+	#	pore_counts
+	#	sample_name
+	#	total_pore_volume
+	# ! summary2
+	
+
+	summary2 = [summ_row_2_strs] + summary2
+	with open(io[1] + '/csv/summary.csv', 'w') as csvout:
 		outputwriter = csv.writer(csvout, delimiter=',')
-		outputwriter.writerows(meta_output)
-		print(color("metafile saved as ../output/csv/summary.csv", 'green') + '\n')
+		outputwriter.writerows(summary2)
+		print(color('summfile saved as ' + io[1] + 'csv/summary.csv', 'green') + '\n')
 
 
 end = time.time()

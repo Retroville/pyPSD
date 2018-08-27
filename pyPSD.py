@@ -79,6 +79,9 @@ class voldist(object):
         self.avg = [self.numavg, self.volavg]
 
         self.porevol = sum(self.volume)
+        self.porecount = len(self.extent)
+
+        self.numtot = sum(self.extent)
 
         self.numstd = np.std(self.extent)
         self.nummin = min(self.extent)
@@ -251,9 +254,9 @@ def filter_data(dat, filter_col, threshold):
     m = [row for row in dat if row[filter_col] >= threshold]
     return m
 
-def get_file(nolists=False, noparse=False):
+def get_file(nolists=False, noparse=False, infolder='../input/'):
     fn_prompt_strs = []
-    os.chdir('../input/')
+    os.chdir(infolder)
     files = glob.glob('*.csv')
     files.sort()
     for i in range(0, len(files)):  # creates prompt string: choice component
@@ -279,13 +282,13 @@ def get_file(nolists=False, noparse=False):
         file_path = []
         file_name = []
         for i in file_path_idx:
-            file_path.append('../input/' + files[i])
+            file_path.append(infolder + files[i])
             mfile_name = files[i]
             mfile_name = mfile_name[:-4]
             file_name.append(mfile_name)
     else:
         print(color('You chose: ', 'green') + files[file_path_idx] + '\n')
-        file_path = '../input/' + files[file_path_idx]
+        file_path = infolder + files[file_path_idx]
         file_name_ = files[file_path_idx]
         file_name = file_name_[:-4]
     return file_path, file_name
