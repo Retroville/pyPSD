@@ -143,6 +143,12 @@ if is_summary is True:
 
 summary2 = []
 
+summary1 = []
+
+tpv = []
+
+total_sample_volume = ['Total Sample Volume']
+
 pore_counts = ['Pore Counts']
 
 sample_name = ['Sample Name']
@@ -232,9 +238,11 @@ for jdx, fp in enumerate(file_path):
 		FILTERED = True
 		filename = file_name[jdx] + '_Report_FILTERED'
 	#	data_out(dat)
+		cleaned_filepath = io[1] + '/csv/' + file_name[jdx] + '_CLEANED_FILTERED.csv'
 	else:
 		FILTERED = False
 		filename = file_name[jdx] + '_Report'
+		cleaned_filepath = io[1] + '/csv/' + file_name[jdx] + '_CLEANED.csv'
 
 
 	if type(ext_col_) is int:
@@ -242,8 +250,21 @@ for jdx, fp in enumerate(file_path):
 	else:
 		nreports = len(ext_col_)
 
-	#enter filename for output:
 	
+	#outputs cleaned csv data files
+	cleaned_output = []
+	cleaned_output.append(strs)
+	for i in range(0,len(dat)):
+		cleaned_output.append(dat[i])
+
+
+	print(cleaned_output)
+	with open(cleaned_filepath, 'w') as csvout:
+		outputwriter = csv.writer(csvout, delimiter=',')
+		outputwriter.writerows(cleaned_output)
+		print(color('cleaned output saved as ' + cleaned_filepath, 'green') + '\n')
+
+	#---
 
 	numofpages = len(dat[0])//8
 	if not len(dat[0])%8 == 0:
@@ -262,6 +283,9 @@ for jdx, fp in enumerate(file_path):
 	print('\nbeginning page creation loop...\n')
 	print('setting current page to 1...')
 	currentpage = 1
+
+	
+
 
 	with PdfPages(io[1] + filename + '.pdf') as pdf:
 
@@ -426,39 +450,60 @@ for jdx, fp in enumerate(file_path):
 	print(color('Report complete at ' + io[1] + filename + '.pdf', 'green'))
 
 	pore_counts.append(v.porecount)
-	sample_name.append(file_name)
-	total_pore_volume.append(v.porevol)
+	sample_name.append(file_name[0])
+	tpv.append(float(v.porevol))
 
+tsv = []
 
 	# CSV summ outputs
 if is_summary is True:
 	for jdx, fp in enumerate(file_path):
-		print('\nEnter the following parameters for ' + file_name[jdx] + 
-			': \n(leave blank if not applicable) ')
-		beam_power.append(float(input('Laser Power: ').rstrip()))
-		total_sample_volume.append(float(input('Total Sample Volume: ').rstrip()))
+		print('\nEnter the following parameters for ' + file_name[jdx])
+			#': \n(leave blank if not applicable) ')
+		beam_power.append(float(input('Laser Power: '))) # dont use float here, use it later IF exists
+		tsv.append(float(input('Total Sample Volume: ')))
 
-	if total_sample_volume:
-		tpv = total_pore_volume
-		tsv = total_sample_volume
+	if tsv:
+		total_sample_volume.append(tsv)
+		total_pore_volume.append(tpv)
 		porosity = ['Porosity'] + [tpv/tsv for tpv,tsv in zip(tpv,tsv)]
-	else:
-		porosity = ['Porosity'] + total_sample_volume
 
 	# At this point the following variables exist: (? - optional, ! - special)
 	#	beam_power
-	#	total_sample_volume
+	# ? total_sample_volume
 	# ? porosity
 	#	pore_counts
 	#	sample_name
 	#	total_pore_volume
 	# ! summary2
-	
+	summary1.append(sample_name)
+	summary1.append(beam_power)
+	summary1.append(pore_counts)
+	summary1.append(total_pore_volume[0])
+	if total_sample_volume:
+		summary1.append(total_sample_volume[0])
+		summary1.append(porosity)
 
 	summary2 = [summ_row_2_strs] + summary2
+
+	midsummary1 = []
+	for i in range(0,len(summary1[0])):
+		midsummary1.append([item[i] for item in summary1])
+
+	summary1 = midsummary1
+
+	summary = []
+
+	print(summary1)
+	print('\n\n')
+	print(summary2)
+	for i in range(0,(len(summary1))):
+		fullrow = summary1[i] + summary2[i]
+		summary.append(fullrow)
+
 	with open(io[1] + '/csv/summary.csv', 'w') as csvout:
 		outputwriter = csv.writer(csvout, delimiter=',')
-		outputwriter.writerows(summary2)
+		outputwriter.writerows(summary)
 		print(color('summfile saved as ' + io[1] + 'csv/summary.csv', 'green') + '\n')
 
 
@@ -470,13 +515,8 @@ print(color('Total time elapsed: ' + str(elapsed) + ' seconds' +
 print(color('Total time spent doing pdf.savefig(): ' + str(savetime) + ' seconds' + 
 			'\nOR ' + str(savetime/60) + ' minutes.\n', 'red'))
 
-
-
-
-
-
-
-
+#.933652 mm^3
+#140 WATT
 
 
 

@@ -304,7 +304,7 @@ def get_data(file_path):
         for row in csvreader:
             if 'Grand total' in row:
                 break
-            row = [ x for x in row if "" != x ]
+            row = [ x for x in row if "" != x] #check if not numerical
             dat.append(row)
 
     strs = dat[1]  # pulls column headers
